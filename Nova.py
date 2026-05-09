@@ -21,6 +21,7 @@ app=ctk.CTk()
 app.resizable(False, False)
 app.title("Nova")
 app.geometry('700x500')
+#def clear(canvas, canvas_img):
 def getpath(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -43,7 +44,7 @@ def gifbg():
     for frame in ImageSequence.Iterator(gif):
         frame = frame.copy().convert('RGBA')
         r, g, b, a = frame.split()
-        a = a.point(lambda x:x *4)
+        a = a.point(lambda x:x *1)
         frame.putalpha(a)
         frames.append(ImageTk.PhotoImage(frame.resize((700, 500))))
     canvas = Canvas(app, width=700, height=500, highlightthickness=0, bd=0, bg="black")
@@ -59,8 +60,20 @@ def gifbg():
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
 def welcome():
     canvas, canvasbg = gifbg()
-    canvas.create_text(356, 183, text="Nova", font=('Necosmic Personal Use', 60), fill="#0a2e18", anchor="center")
-    canvas.create_text(350, 180, text="Nova", font=('Necosmic Personal Use', 60), fill="#319950", anchor='center')
+    canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
+    canvas.create_text(350, 180, text="Nova", font=('Necosmic Personal Use', 69), fill="#319950", anchor='center')
+    continuebtn2 = canvas.create_text(353, 314, text="Continue", font=('Necosmic Personal Use', 28), fill="#0a2e18", anchor="center")
+    continuebtn = canvas.create_text(350,310, text="Continue", font=('Necosmic Personal Use', 28), fill="#319950", anchor="center")
+    def enter(e):
+        canvas.itemconfig(continuebtn, fill="#0F4423")
+        canvas.itemconfig(continuebtn2, fill="#000000")
+    def leave(e):
+        canvas.itemconfig(continuebtn, fill="#319950")
+        canvas.itemconfig(continuebtn2, fill="#0a2e18")
+    canvas.tag_bind(continuebtn, "<Enter>", enter)
+    canvas.tag_bind(continuebtn, "<Leave>", leave)
+    canvas.tag_bind(continuebtn2, '<Enter>', enter)
+    canvas.tag_bind(continuebtn2, "<Leave>", leave)
 welcome()
 
 
