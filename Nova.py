@@ -56,9 +56,11 @@ def gifbg():
         after_id = app.after(20, animate, (frame_index+1) % len(frames))
     animate()
     return canvas, canvasbg
+load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
 def welcome():
     canvas, canvasbg = gifbg()
-    canvas.create_text(350, 180, text="Nova", font=('Arial', 38), fill="#2e412d", anchor='center')
+    canvas.create_text(356, 183, text="Nova", font=('Necosmic Personal Use', 60), fill="#0a2e18", anchor="center")
+    canvas.create_text(350, 180, text="Nova", font=('Necosmic Personal Use', 60), fill="#319950", anchor='center')
 welcome()
 
 
