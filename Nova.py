@@ -31,7 +31,7 @@ from ctypes import windll, byref, create_unicode_buffer, create_string_buffer
 FR_PRIVATE = 0x10
 def load_font(font_path):
     windll.gdi32.AddFontResourceExW(font_path, FR_PRIVATE, 0)
-
+app.iconbitmap(getpath("Images/GIFS/logo.ico"))
 def gifbg():
     global after_id 
     if after_id:
@@ -39,7 +39,7 @@ def gifbg():
     for widget in app.winfo_children():
         widget.destroy()
     frames  = []
-    gif = Image.open(getpath('greenglow.gif'))
+    gif = Image.open(getpath('Images/GIFS/greenglow.gif'))
     for frame in ImageSequence.Iterator(gif):
         frame = frame.copy().convert('RGBA')
         r, g, b, a = frame.split()
@@ -56,8 +56,10 @@ def gifbg():
         after_id = app.after(20, animate, (frame_index+1) % len(frames))
     animate()
     return canvas, canvasbg
-canvas, canvasbg = gifbg()
-
+def welcome():
+    canvas, canvasbg = gifbg()
+    canvas.create_text(350, 180, text="Nova", font=('Arial', 38), fill="#2e412d", anchor='center')
+welcome()
 
 
 
