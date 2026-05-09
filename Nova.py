@@ -25,6 +25,17 @@ def clear(canvas, canvas_img):
     for item in canvas.find_all():
         if item != canvas_img:
             canvas.delete(item)
+def rounded_rect(canvas, x1, y1, x2, y2, r=20, color="#0F4423", width=2):
+    arc_kwargs = {"outline": color, "width": width}
+    line_kwargs = {"fill": color, "width": width}
+    canvas.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=90, style="arc", **arc_kwargs)
+    canvas.create_arc(x2-2*r, y1, x2, y1+2*r, start=0, extent=90, style="arc", **arc_kwargs)
+    canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90, style="arc", **arc_kwargs)          
+    canvas.create_arc(x2-2*r, y2-2*r, x2, y2, start=270, extent=90, style="arc", **arc_kwargs)
+    canvas.create_line(x1+r, y1, x2-r, y1, **line_kwargs)
+    canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs)
+    canvas.create_line(x1, y1+r, x1, y2-r, **line_kwargs)
+    canvas.create_line(x2, y1+r, x2, y2-r, **line_kwargs)
 def getpath(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -61,6 +72,7 @@ def gifbg():
     animate()
     return canvas, canvasbg
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
+
 def main(canvas, canvas_img):
     canvas, canvasbg = gifbg()
     clear(canvas, canvas_img)
@@ -71,11 +83,12 @@ def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
     canvas.create_text(350, 180, text="Nova", font=('Necosmic Personal Use', 69), fill="#319950", anchor='center')
+    rounded_rect(canvas, 233, 290, 473, 330, r=9, color="#0F4423", width=3  )
     continuebtn2 = canvas.create_text(353, 314, text="Continue", font=('Necosmic Personal Use', 28), fill="#0a2e18", anchor="center")
     continuebtn = canvas.create_text(350,310, text="Continue", font=('Necosmic Personal Use', 28), fill="#319950", anchor="center")
     def enter(e):
         canvas.itemconfig(continuebtn, fill="#0F4423")
-        canvas.itemconfig(continuebtn2, fill="#000000")
+        canvas.itemconfig(continuebtn2, fill="#0E0D0D")
     def leave(e):
         canvas.itemconfig(continuebtn, fill="#319950")
         canvas.itemconfig(continuebtn2, fill="#0a2e18")
