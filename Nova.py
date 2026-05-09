@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import threading 
 import queue
+after_id = None
 from groq import Groq
 import json 
 import speech_recognition as sr
@@ -31,11 +32,31 @@ FR_PRIVATE = 0x10
 def load_font(font_path):
     windll.gdi32.AddFontResourceExW(font_path, FR_PRIVATE, 0)
 
-
-
-
-
-
+def gifbg():
+    global after_id 
+    if after_id:
+        app.after_cancel(after_id)
+    for widget in app.winfo_children():
+        widget.destroy()
+    frames  = []
+    gif = Image.open(getpath('greenglow.gif'))
+    for frame in ImageSequence.Iterator(gif):
+        frame = frame.copy().convert('RGBA')
+        r, g, b, a = frame.split()
+        a = a.point(lambda x:x *4)
+        frame.putalpha(a)
+        frames.append(ImageTk.PhotoImage(frame.resize((700, 500))))
+    canvas = Canvas(app, width=700, height=500, highlightthickness=0, bd=0, bg="black")
+    canvas.place(x=0, y=0)
+    canvasbg = canvas.create_image(0, 0, anchor="nw")
+    def animate(frame_index=0):
+        global after_id
+        canvas.itemconfig(canvasbg, image=frames[frame_index])
+        canvas._frames = frames
+        after_id = app.after(20, animate, (frame_index+1) % len(frames))
+    animate()
+    return canvas, canvasbg
+canvas, canvasbg = gifbg()
 
 
 
