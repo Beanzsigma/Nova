@@ -61,6 +61,12 @@ def gifbg():
     animate()
     return canvas, canvasbg
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
+def main(canvas, canvas_img):
+    canvas, canvasbg = gifbg()
+    clear(canvas, canvas_img)
+    canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
+    canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
+
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
@@ -77,11 +83,13 @@ def welcome():
     canvas.tag_bind(continuebtn, "<Leave>", leave)
     canvas.tag_bind(continuebtn2, '<Enter>', enter)
     canvas.tag_bind(continuebtn2, "<Leave>", leave)
-    canvas.tag_bind(continuebtn, "<Button-1>", lambda e: welcome())
-    canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: welcome())
+    canvas.tag_bind(continuebtn, "<Button-1>", lambda e: main(canvas, canvasbg))
+    canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: main(canvas, canvasbg))
+
+
+
+
+
+
 welcome()
-
-
-
-
 app.mainloop()
