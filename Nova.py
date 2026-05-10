@@ -72,7 +72,19 @@ def gifbg():
     animate()
     return canvas, canvasbg
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
-
+def fadein(canvas):
+    overlay = canvas.create_rectangle(0, 0, 700, 500, fill='black', state='normal')
+    stipples = ["gray75", "gray50", "gray25", "gray12"]
+    step= [0]
+    alpha=[1.0]
+    def fade():
+        if step[0] <len(stipples):
+            canvas.itemconfig(overlay, stipple=stipples[step[0]])
+            step[0] += 1
+            app.after(40, fade)
+        else:
+            canvas.delete(overlay)
+    fade()
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
@@ -123,17 +135,24 @@ def main(canvas, canvas_img):
     canvas.create_text(175, 100, text="Voice Input", font=("Necosmic Personal Use", 16), fill="#319950", anchor='center')
     canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
     canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
-
+    def animate(frame_index=0):
+        global after_id
+        canvas.itemconfig(canvas_img, image=frames[frame_index])
+        after_id = app.after(20, animate, (frame_index+1) % len(frames))
+    animate()
+    fadein(canvas)
 def fademain(canvas, canvasbg):
     global after_id
     if after_id:
         app.after_cancel(after_id)
         after_id= None
-    items = [i for i in canvas.find_all() if i != canvasbg]
+    overlay = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray75", state="hidden")
+    items = [i for i in canvas.find_all() if i != canvasbg and i != overlay]
+    stipples = ["gray75", "gray50", 'gray25', '']
     alpha = [1.0]
     def step():
-        if alpha[0] > 0.1:
-            alpha[0] -= 0.08
+        if alpha[0] > 0.2:
+            alpha[0] -= 0.1
             for item in items:
                 try:
                     current= canvas.itemcget(item, "fill")
@@ -144,8 +163,12 @@ def fademain(canvas, canvasbg):
                         canvas.itemconfig(item, fill=f"#{r:02x}{g:02x}{b:02x}")
                 except:
                     pass
+            step_num = int((1 - alpha[0]) / 0.25)
+            stipple = stipples[min(step_num, 3)]
+            canvas.itemconfig(overlay, state='normal', stipple=stipple)
             app.after(20, step)
         else:
+            canvas.delete(overlay)
             main(canvas, canvasbg)
     step()
 def welcome():
