@@ -74,7 +74,6 @@ def gifbg():
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
 
 def main(canvas, canvas_img):
-    canvas, canvasbg = gifbg()
     clear(canvas, canvas_img)
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
     newnormalimg = normalimg.point(lambda p:min(255, int(p * 1)))
@@ -114,7 +113,7 @@ def main(canvas, canvas_img):
     canvas.create_text(100, 325, text="History", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
     rounded_rect(canvas, 223, 308, 690, 478, r=9, color="#0a2e18", width=3)
     rounded_rect(canvas, 220, 305, 687, 475, r=9, color="#319950")
-    canvas.create_text(453, 328, text="Quick Actions", font=('Necosmic Personal Use', 17), fil="#0a2e18", anchor='center')
+    canvas.create_text(453, 328, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='center')
     canvas.create_text( 450, 325, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#319950", anchor='center')
     rounded_rect(canvas, 13, 88, 343, 293, r=9, color="#0a2e18")
     rounded_rect(canvas, 10, 85, 340, 290, r=9, color="#319950")
@@ -125,11 +124,30 @@ def main(canvas, canvas_img):
     canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
     canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
 
-
-
-
-
-
+def fademain(canvas, canvasbg):
+    global after_id
+    if after_id:
+        app.after_cancel(after_id)
+        after_id= None
+    items = [i for i in canvas.find_all() if i != canvasbg]
+    alpha = [1.0]
+    def step():
+        if alpha[0] > 0.1:
+            alpha[0] -= 0.08
+            for item in items:
+                try:
+                    current= canvas.itemcget(item, "fill")
+                    if current and current !="":
+                        r = int(int(current[1:3], 16)  * alpha[0])
+                        g = int(int(current[3:5], 16) * alpha[0])
+                        b = int(int(current[5:7], 16) * alpha[0])
+                        canvas.itemconfig(item, fill=f"#{r:02x}{g:02x}{b:02x}")
+                except:
+                    pass
+            app.after(20, step)
+        else:
+            main(canvas, canvasbg)
+    step()
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
@@ -151,8 +169,8 @@ def welcome():
     canvas.tag_bind(continuebtn, "<Leave>", leave)
     canvas.tag_bind(continuebtn2, '<Enter>', enter)
     canvas.tag_bind(continuebtn2, "<Leave>", leave)
-    canvas.tag_bind(continuebtn, "<Button-1>", lambda e: main(canvas, canvasbg))
-    canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: main(canvas, canvasbg))
+    canvas.tag_bind(continuebtn, "<Button-1>", lambda e: fademain(canvas, canvasbg))
+    canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: fademain(canvas, canvasbg))
 
 
 
