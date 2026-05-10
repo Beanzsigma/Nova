@@ -78,12 +78,16 @@ def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
-
+    canvas.create_text(537, 480, text="Powered by Groq", font=('Necosmic Personal Use', 10), fill="#319950", anchor='nw')
+    rounded_rect(canvas, 13, 323, 203, 493, r=9, color="#0a2e18", width=3)
+    rounded_rect(canvas, 10, 320, 200, 490, r=9, color="#319950", width=3)
+    canvas.create_text(103, 347, text="History", font=('Necosmic Personal Use', 16),fill="#0a2e18", anchor='center' )
+    canvas.create_text(100, 344, text="History", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
     canvas.create_text(350, 180, text="Nova", font=('Necosmic Personal Use', 69), fill="#319950", anchor='center')
-    rounded_rect(canvas, 233, 290, 473, 330, r=9, color="#0F4423", width=3  )
+    rounded_rect(canvas, 232, 290, 472, 330, r=9, color="#0F4423", width=3  )
     continuebtn2 = canvas.create_text(353, 314, text="Continue", font=('Necosmic Personal Use', 28), fill="#0a2e18", anchor="center")
     continuebtn = canvas.create_text(350,310, text="Continue", font=('Necosmic Personal Use', 28), fill="#319950", anchor="center")
     def enter(e):
