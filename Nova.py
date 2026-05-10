@@ -87,7 +87,14 @@ def main(canvas, canvas_img):
     rounded_rect(canvas, 220, 305, 687, 475, r=9, color="#319950")
     canvas.create_text(453, 328, text="Quick Actions", font=('Necosmic Personal Use', 17), fil="#0a2e18", anchor='center')
     canvas.create_text( 450, 325, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#319950", anchor='center')
-
+    rounded_rect(canvas, 13, 88, 343, 293, r=9, color="#0a2e18")
+    rounded_rect(canvas, 10, 85, 340, 290, r=9, color="#319950")
+    rounded_rect(canvas, 353, 88, 693, 293, r=9, color="#0a2e18")
+    rounded_rect(canvas, 350, 85, 690, 290, r=9, color="#319950")
+    canvas.create_text(178, 103, text="Voice Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
+    canvas.create_text(175, 100, text="Voice Input", font=("Necosmic Personal Use", 16), fill="#319950", anchor='center')
+    canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
+    canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
