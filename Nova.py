@@ -79,15 +79,14 @@ def main(canvas, canvas_img):
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
     newnormalimg = normalimg.point(lambda p:min(255, int(p * 1)))
     hoverimg = newnormalimg.point(lambda p:min (255, int(p*1/1.6)))
-    recordingimg = Image.open(getpath("Images/GIFS/mic4.png")).resize((125,125))
-
+    recordingimg = Image.open(getpath("Images/GIFS/mic5.png")).resize((125,125))
     canvas.filepic_img = ImageTk.PhotoImage(newnormalimg)
     canvas.filepic_img_hover = ImageTk.PhotoImage(hoverimg)
     canvas.filepic_img_recording = ImageTk.PhotoImage(recordingimg)
     recording = [False]
     imgitem = canvas.create_image(80, 193, image=canvas.filepic_img, anchor='center')
-    rectextshdw = canvas.create_text(83, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
-    rectext = canvas.create_text(80, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
+    rectextshdw = canvas.create_text(86, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
+    rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
     def togglerec(e):
         if not recording[0]:
             recording[0] = True
@@ -102,6 +101,10 @@ def main(canvas, canvas_img):
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
+    canvas.create_text(13, 13, text="Your words", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='nw')
+    canvas.create_text(10, 10, text="Your words", font=('Necosmic Personal Use', 17), fill="#319950", anchor="nw")
+    canvas.create_text(693, 13, text="Your PC", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor="ne")
+    canvas.create_text(690, 10, text="Your PC", font=('Necosmic Personal Use', 17), fill="#319950", anchor="ne")
     canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
     canvas.create_text(537, 483, text="Powered by Groq", font=('Necosmic Personal Use', 10), fill="#319950", anchor='nw')
