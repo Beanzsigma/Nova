@@ -79,12 +79,29 @@ def main(canvas, canvas_img):
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
     newnormalimg = normalimg.point(lambda p:min(255, int(p * 1)))
     hoverimg = newnormalimg.point(lambda p:min (255, int(p*1/1.6)))
+    recordingimg = Image.open(getpath("Images/GIFS/mic4.png")).resize((125,125))
+
     canvas.filepic_img = ImageTk.PhotoImage(newnormalimg)
     canvas.filepic_img_hover = ImageTk.PhotoImage(hoverimg)
+    canvas.filepic_img_recording = ImageTk.PhotoImage(recordingimg)
+    recording = [False]
     imgitem = canvas.create_image(80, 193, image=canvas.filepic_img, anchor='center')
-    canvas.tag_bind(imgitem, "<Button-1>", lambda e: main(canvas, canvas_img))
-    canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover))
-    canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img))
+    rectextshdw = canvas.create_text(83, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
+    rectext = canvas.create_text(80, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
+    def togglerec(e):
+        if not recording[0]:
+            recording[0] = True
+            canvas.itemconfig(imgitem, image=canvas.filepic_img_recording)
+            canvas.itemconfig(rectext, text="Recording...")
+            canvas.itemconfig(rectextshdw, text="Recording...")
+        else:
+            recording[0] = False
+            canvas.itemconfig(imgitem, image=canvas.filepic_img)
+            canvas.itemconfig(rectext, text="")
+            canvas.itemconfig(rectextshdw, text="")
+    canvas.tag_bind(imgitem, "<Button-1>", togglerec)
+    canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
+    canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
     canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
     canvas.create_text(537, 483, text="Powered by Groq", font=('Necosmic Personal Use', 10), fill="#319950", anchor='nw')
@@ -104,6 +121,12 @@ def main(canvas, canvas_img):
     canvas.create_text(175, 100, text="Voice Input", font=("Necosmic Personal Use", 16), fill="#319950", anchor='center')
     canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
     canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
+
+
+
+
+
+
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
