@@ -1,4 +1,6 @@
 import customtkinter as ctk
+import sounddevice as sd
+import numpy as np
 import threading 
 import queue
 after_id = None
@@ -36,6 +38,25 @@ def rounded_rect(canvas, x1, y1, x2, y2, r=20, color="#0F4423", width=2):
     canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs)
     canvas.create_line(x1, y1+r, x1, y2-r, **line_kwargs)
     canvas.create_line(x2, y1+r, x2, y2-r, **line_kwargs)
+voiceque = queue.Queue()
+recordingactive  = [False]
+def listenvoice(q):
+    samplerate = 16000
+    chunks = []
+    def callback(indata, frames, time, status):
+        if recordingactive[0]:
+            chunks.append(indata.copy())
+    with sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", callback=callback)
+    if chunks:
+        audiodata = np.concatenate(chunks, axis=0)
+    try:
+        text= r.recognize_google(audio)
+        q.put(text)
+    except sr.UnknownValueError:
+        q.put("__unclear__")
+    except Exception as e:
+        q.put(f"__error__{e}")
+
 def getpath(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -98,12 +119,31 @@ def main(canvas, canvas_img):
     imgitem = canvas.create_image(80, 193, image=canvas.filepic_img, anchor='center')
     rectextshdw = canvas.create_text(86, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
+    def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
+        try:
+            result = voiceque.get_nowait()
+            recording[0] = False
+            canvas.itemconfig(imgitem, image=canvas.filepic_img)
+            if result == "__timeout__":
+                canvas.itemconfig(rectext, text="Timed out")
+                canvas.itemconfig(rectextshdw, text="Timed out")
+            elif result == "__unclear__":
+                canvas.itemconfig(rectext, text="Unable to understand")
+                canvas.itemconfig(rectextshdw="Unable to understand")
+            else:
+                canvas.itemconfig(rectext, text=result)
+                canvas.itemconfig(rectextshdw, text=result)
+        except queue.Empty:
+            canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
         if not recording[0]:
             recording[0] = True
             canvas.itemconfig(imgitem, image=canvas.filepic_img_recording)
             canvas.itemconfig(rectext, text="Recording...")
             canvas.itemconfig(rectextshdw, text="Recording...")
+            t = threading.Thread(target=listenvoice, args=(voiceque, ),  daemon=True)
+            t.start()
+            canvas.after(100, lambda: checkvoice(canvas, rectext, rectext, imgitem,recording ))
         else:
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
