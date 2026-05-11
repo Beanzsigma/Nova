@@ -109,30 +109,54 @@ def fadein(canvas):
         else:
             canvas.delete(overlay)
     fade()
-def showaigif(canvas, on_done):
+def showaigif(canvas, on_done, canvas_img):
+    global after_id
+    if after_id:
+        app.after_cancel(after_id)
+        after_id= None
     proc_frames = []
     proc_gif = Image.open(getpath("Images/GIFS/AI movement.gif"))
+    from PIL import ImageDraw
     for frame in ImageSequence.Iterator(proc_gif):
-        frame = frame.copy().convert("RGBA")
-        proc_frames.append(ImageTk.PhotoImage(frame.resize((200, 200))))
-
-    overlay = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray50")
-    procimg = canvas.create_image(350, 220, anchor='center')
+        frame = frame.copy().convert("RGBA").resize((300, 300))
+        mask = Image.new("L", (300, 300), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle([0, 0, 299, 299], radius=150, fill=255)
+        frame.putalpha(mask)
+        proc_frames.append(ImageTk.PhotoImage(frame))
+    overlay1 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple="gray50")
+    overlay2 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple='gray50')
+    overlay3 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple='gray50')
+    procimg = canvas.create_image(350, 210, anchor='center')
     canvas._proc_frames = proc_frames
-    proctextshdw = canvas.create_text(353, 323, text="Processing...", font=('Necosmic Personal Use', 18), fill="#0a2e18", anchor='center')
-    proctext = canvas.create_text(350, 320, text="Processing...", font=('Necosmic Personal Use', 18), fill="#319950", anchor='center')
-    procafter= [None]
+    proctextshdw = canvas.create_text(353, 390, text="Processing...", font=('Necosmic Personal Use', 18), fill="#666666", anchor='center')
+    proctext = canvas.create_text(350, 387, text="Processing...", font=('Necosmic Personal Use', 18), fill="#FFFFFF", anchor='center')
+    canvas.tag_raise(overlay1)
+    canvas.tag_raise(overlay2)
+    canvas.tag_raise(overlay3)
+    canvas.tag_raise(procimg)
+    canvas.tag_raise(proctextshdw)
+    canvas.tag_raise(proctext)
+    procafter = [None]
+    canvas._overlay_items = [overlay1, overlay2, overlay3, procimg, proctextshdw, proctext]
     def animate_proc(frame_index=0):
         canvas.itemconfig(procimg, image=proc_frames[frame_index])
-        procafter[0] = canvas.after(50, animate_proc, (frame_index +1) % len(proc_frames))
+        procafter[0] = canvas.after(50, animate_proc, (frame_index + 1) % len(proc_frames))
     animate_proc()
     def done():
         if procafter[0]:
             canvas.after_cancel(procafter[0])
-        canvas.delete(overlay)
+        canvas.delete(overlay1)
+        canvas.delete(overlay2)
+        canvas.delete(overlay3)
         canvas.delete(procimg)
         canvas.delete(proctext)
         canvas.delete(proctextshdw)
+        def animate(frame_index=0):
+            global after_id
+            canvas.itemconfig(canvas_img, image=frames[frame_index])
+            after_id = app.after(20, animate, (frame_index+1) % len(frames))
+        animate()
         on_done()
     canvas.after(5000, done)
 def main(canvas, canvas_img):
@@ -152,14 +176,14 @@ def main(canvas, canvas_img):
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
+            lastresult[0] = result 
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
             canvas.itemconfig(rectext, text="Processed")
             canvas.itemconfig(rectextshdw, text="Processed")
-            showaigif(canvas, lambda: print("done ai next"))
+            showaigif(canvas, lambda: print("done ai next"), canvas_img)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
-        lastresult[0] = result 
     def togglerec(e):
         if not recording[0]:
             recording[0] = True
@@ -204,7 +228,10 @@ def main(canvas, canvas_img):
     def animate(frame_index=0):
         global after_id
         canvas.itemconfig(canvas_img, image=frames[frame_index])
-        after_id = app.after(20, animate, (frame_index+1) % len(frames))
+        if hasattr(canvas, '_overlay_items'):
+            for item in canvas._overlay_items:
+                canvas.tag_raise(item)
+        after_id = app.after(20, animate, (frame_index + 1) % len(frames))
     animate()
     fadein(canvas)
 def fademain(canvas, canvasbg):
