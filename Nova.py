@@ -109,7 +109,7 @@ def fadein(canvas):
         else:
             canvas.delete(overlay)
     fade()
-def showaigif(canvas, on_done, canvas_img):
+def showaigif(canvas, on_done, canvas_img, textinput_window):
     global after_id
     if after_id:
         app.after_cancel(after_id)
@@ -137,6 +137,7 @@ def showaigif(canvas, on_done, canvas_img):
     canvas.tag_raise(procimg)
     canvas.tag_raise(proctextshdw)
     canvas.tag_raise(proctext)
+    canvas.itemconfigure(textinput_window, state='hidden')
     procafter = [None]
     canvas._overlay_items = [overlay1, overlay2, overlay3, procimg, proctextshdw, proctext]
     def animate_proc(frame_index=0):
@@ -157,6 +158,7 @@ def showaigif(canvas, on_done, canvas_img):
             canvas.itemconfig(canvas_img, image=frames[frame_index])
             after_id = app.after(20, animate, (frame_index+1) % len(frames))
         animate()
+        canvas.itemconfigure(textinput_window, state="normal")
         on_done()
     canvas.after(5000, done)
 def main(canvas, canvas_img):
@@ -169,8 +171,14 @@ def main(canvas, canvas_img):
     canvas.filepic_img = ImageTk.PhotoImage(newnormalimg)
     canvas.filepic_img_hover = ImageTk.PhotoImage(hoverimg)
     canvas.filepic_img_recording = ImageTk.PhotoImage(recordingimg)
-    recording = [False]
     imgitem = canvas.create_image(80, 193, image=canvas.filepic_img, anchor='center')
+    normalimg2 = Image.open(getpath('Images/GIFS/check.png')).resize((40, 40))
+    newnormalimg2 = normalimg2.point(lambda p:min(255, int(p *1)))
+    hoverimg2 = newnormalimg2.point(lambda p:min (255, int(p*1/1.6)))
+    canvas.filepic_img2 = ImageTk.PhotoImage(newnormalimg2)
+    canvas.filepic_img_hover2 = ImageTk.PhotoImage(hoverimg2)
+    imgitem2 = canvas.create_image(654, 148, image=canvas.filepic_img2, anchor='center')
+    recording = [False]
     rectextshdw = canvas.create_text(86, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
     textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Necosmic Personal Use', 13))
@@ -183,7 +191,7 @@ def main(canvas, canvas_img):
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
             canvas.itemconfig(rectext, text="Processed")
             canvas.itemconfig(rectextshdw, text="Processed")
-            showaigif(canvas, lambda: print("done ai next"), canvas_img)
+            showaigif(canvas, lambda: print("done ai next"), canvas_img, textinput_window)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -195,7 +203,7 @@ def main(canvas, canvas_img):
             canvas.itemconfig(rectextshdw, text="Recording...")
             t = threading.Thread(target=listenvoice, args=(voiceque, ),  daemon=True)
             t.start()
-            canvas.after(100, lambda: checkvoice(canvas, rectext, rectext, imgitem,recording ))
+            canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
         else:
             recording[0] = False
             recordingactive[0] = False
@@ -204,6 +212,9 @@ def main(canvas, canvas_img):
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
+    canvas.tag_bind(imgitem2, "<Button-1>", lambda e: welcome())
+    canvas.tag_bind(imgitem2, "<Enter>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img_hover2))
+    canvas.tag_bind(imgitem2,"<Leave>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img2) )
     canvas.create_text(13, 13, text="Your words", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='nw')
     canvas.create_text(10, 10, text="Your words", font=('Necosmic Personal Use', 17), fill="#319950", anchor="nw")
     canvas.create_text(693, 13, text="Your PC", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor="ne")
