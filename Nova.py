@@ -109,8 +109,35 @@ def fadein(canvas):
         else:
             canvas.delete(overlay)
     fade()
+def showaigif(canvas, on_done):
+    proc_frames = []
+    proc_gif = Image.open(getpath("Images/GIFS/AI movement.gif"))
+    for frame in ImageSequence.Iterator(proc_gif):
+        frame = frame.copy().convert("RGBA")
+        proc_frames.append(ImageTk.PhotoImage(frame.resize((200, 200))))
+
+    overlay = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray50")
+    procimg = canvas.create_image(350, 220, anchor='center')
+    canvas._proc_frames = proc_frames
+    proctextshdw = canvas.create_text(353, 323, text="Processing...", font=('Necosmic Personal Use', 18), fill="#0a2e18", anchor='center')
+    proctext = canvas.create_text(350, 320, text="Processing...", font=('Necosmic Personal Use', 18), fill="#319950", anchor='center')
+    procafter= [None]
+    def animate_proc(frame_index=0):
+        canvas.itemconfig(procimg, image=proc_frames[frame_index])
+        procafter[0] = canvas.after(50, animate_proc, (frame_index +1) % len(proc_frames))
+    animate_proc()
+    def done():
+        if procafter[0]:
+            canvas.after_cancel(procafter[0])
+        canvas.delete(overlay)
+        canvas.delete(procimg)
+        canvas.delete(proctext)
+        canvas.delete(proctextshdw)
+        on_done()
+    canvas.after(5000, done)
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
+    lastresult = [None]
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
     newnormalimg = normalimg.point(lambda p:min(255, int(p * 1)))
     hoverimg = newnormalimg.point(lambda p:min (255, int(p*1/1.6)))
@@ -129,8 +156,10 @@ def main(canvas, canvas_img):
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
             canvas.itemconfig(rectext, text="Processed")
             canvas.itemconfig(rectextshdw, text="Processed")
+            showaigif(canvas, lambda: print("done ai next"))
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
+        lastresult[0] = result 
     def togglerec(e):
         if not recording[0]:
             recording[0] = True
