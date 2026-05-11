@@ -173,6 +173,8 @@ def main(canvas, canvas_img):
     imgitem = canvas.create_image(80, 193, image=canvas.filepic_img, anchor='center')
     rectextshdw = canvas.create_text(86, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
+    textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Necosmic Personal Use', 13))
+    textinput_window = canvas.create_window(495, 150, window=textinput, anchor='center')
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
