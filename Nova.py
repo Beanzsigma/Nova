@@ -46,17 +46,20 @@ def listenvoice(q):
     def callback(indata, frames, time, status):
         if recordingactive[0]:
             chunks.append(indata.copy())
-    with sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", callback=callback)
+    with sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", callback=callback):
+        while recordingactive[0]:
+            sd.sleep(100)
     if chunks:
         audiodata = np.concatenate(chunks, axis=0)
-    try:
-        text= r.recognize_google(audio)
-        q.put(text)
-    except sr.UnknownValueError:
-        q.put("__unclear__")
-    except Exception as e:
-        q.put(f"__error__{e}")
-
+        r = sr.Recognizer()
+        audio = sr.AudioData(audiodata.tobytes(), samplerate, 2)
+        try:
+            text= r.recognize_google(audio)
+            q.put(text)
+        except sr.UnknownValueError:
+            q.put("__unclear__")
+        except Exception as e:
+            q.put(f"__error__{e}")
 def getpath(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -124,20 +127,14 @@ def main(canvas, canvas_img):
             result = voiceque.get_nowait()
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
-            if result == "__timeout__":
-                canvas.itemconfig(rectext, text="Timed out")
-                canvas.itemconfig(rectextshdw, text="Timed out")
-            elif result == "__unclear__":
-                canvas.itemconfig(rectext, text="Unable to understand")
-                canvas.itemconfig(rectextshdw="Unable to understand")
-            else:
-                canvas.itemconfig(rectext, text=result)
-                canvas.itemconfig(rectextshdw, text=result)
+            canvas.itemconfig(rectext, text="Processed")
+            canvas.itemconfig(rectextshdw, text="Processed")
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
         if not recording[0]:
             recording[0] = True
+            recordingactive[0] = True
             canvas.itemconfig(imgitem, image=canvas.filepic_img_recording)
             canvas.itemconfig(rectext, text="Recording...")
             canvas.itemconfig(rectextshdw, text="Recording...")
@@ -146,9 +143,9 @@ def main(canvas, canvas_img):
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectext, imgitem,recording ))
         else:
             recording[0] = False
-            canvas.itemconfig(imgitem, image=canvas.filepic_img)
-            canvas.itemconfig(rectext, text="")
-            canvas.itemconfig(rectextshdw, text="")
+            recordingactive[0] = False
+            canvas.itemconfig(rectext, text="Processing...")
+            canvas.itemconfig(rectextshdw, text="Processing...")
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
