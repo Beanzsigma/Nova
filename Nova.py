@@ -189,9 +189,7 @@ def main(canvas, canvas_img):
             lastresult[0] = result 
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
-            canvas.itemconfig(rectext, text="Processed")
-            canvas.itemconfig(rectextshdw, text="Processed")
-            showaigif(canvas, lambda: print("done ai next"), canvas_img, textinput_window)
+            showaigif(canvas,lambda: (canvas.itemconfig(rectext, text="Processed"),canvas.itemconfig(rectextshdw, text="Processed")),canvas_img,textinput_window)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -212,7 +210,7 @@ def main(canvas, canvas_img):
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
-    canvas.tag_bind(imgitem2, "<Button-1>", lambda e: welcome())
+    canvas.tag_bind(imgitem2, "<Button-1>", lambda e: showaigif(canvas, lambda: print('dun'), canvas_img, textinput_window))
     canvas.tag_bind(imgitem2, "<Enter>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img_hover2))
     canvas.tag_bind(imgitem2,"<Leave>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img2) )
     canvas.create_text(13, 13, text="Your words", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='nw')
