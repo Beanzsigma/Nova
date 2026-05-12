@@ -48,7 +48,7 @@ Example: "volume 50" → {"actions": [{"action": "set_volume", "value": 50}]}
 """
 def askgroq(user_text):
     try: 
-        response = client.chat.completions.create(model="llama3-70b-8192", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "context": user_text}], max_tokens=500)
+        response = client.chat.completions.create(model="llama3-70b-8192", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=500)
         raw = response.choices[0].message.content.strip()
         parsed = json.loads(raw)
         return parsed
@@ -65,7 +65,33 @@ def exectuteactions(actions):
                 interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
                 volume = cast(interface, POINTER(IAudioEndpointVolume))
                 volume.SetMasterVolumeLevelScalar(int(value)/ 100, None)
-                
+            elif action == "mute_volume":
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                volume = cast(interface, POINTER(IAudioEndpointVolume))
+                volume.SetMute(1, None)
+            elif action == "unmute_volume":
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                volume = cast(interface, POINTER(IAudioEndpointVolume))
+                volume.SetMute(0, None)
+            elif action == "screenshot":
+                import time
+                pyautogui.screenshot(f"screenshot_{int(time.time())}.png")
+            elif action =="open_app":
+                subprocess.Popen(["start", value], shell=True)
+            elif action == "close_app":
+                subprocess.Popen(["taskkill", "/f", "/im", f"{value}.exe"], shell=True)
+            elif action == "open_url":
+                subprocess.Popen(["start", value], shell=True)
+            elif action == "press_key":
+                pyautogui.hotkey(*value.split("+"))
+            elif action == "lock_pc":
+                subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
+            elif action == "sleep_pc":
+                subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
+        except Exception as e:
+            print(f"errorr {action}: {e}")
 ctk.set_appearance_mode('dark')
 app=ctk.CTk()
 app.resizable(False, False)
