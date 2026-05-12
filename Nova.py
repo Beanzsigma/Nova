@@ -18,6 +18,8 @@ from tkinter import Canvas, Text
 from PIL import Image, ImageSequence, ImageTk
 import os
 import sys
+GROQkey = "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"
+client = Groq(api_key=GROQkey)
 ctk.set_appearance_mode('dark')
 app=ctk.CTk()
 app.resizable(False, False)
