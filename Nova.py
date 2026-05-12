@@ -48,7 +48,7 @@ Example: "volume 50" → {"actions": [{"action": "set_volume", "value": 50}]}
 """
 def askgroq(user_text):
     try: 
-        response = client.chat.completions.create(model="llama3-70b-8192", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=500)
+        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=500)
         raw = response.choices[0].message.content.strip()
         parsed = json.loads(raw)
         return parsed
@@ -263,7 +263,15 @@ def main(canvas, canvas_img):
             lastresult[0] = result 
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
-            showaigif(canvas,lambda: (canvas.itemconfig(rectext, text="Processed"),canvas.itemconfig(rectextshdw, text="Processed")),canvas_img,textinput_window)
+            def on_done():
+                canvas.itemconfig(rectext, text="Processed")
+                canvas.itemconfig(rectextshdw, text="Processed")
+                def run_groq():
+                    parsed = askgroq(result)
+                    actions = parsed.get("actions", [])
+                    exectuteactions(actions)
+                threading.Thread(target=run_groq, daemon=True).start()
+            showaigif(canvas, on_done, canvas_img, textinput_window)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -281,10 +289,21 @@ def main(canvas, canvas_img):
             recordingactive[0] = False
             canvas.itemconfig(rectext, text="Processing...")
             canvas.itemconfig(rectextshdw, text="Processing...")
+    def submittext(e):
+        text= textinput.get().strip()
+        if text:
+            textinput.delete(0, 'end')
+            def on_done():
+                def run_groq():
+                    parsed = askgroq(text)
+                    actions = parsed.get("actions", [])
+                    exectuteactions(actions)
+                threading.Thread(target=run_groq, daemon=True).start()
+            showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
-    canvas.tag_bind(imgitem2, "<Button-1>", lambda e: showaigif(canvas, lambda: print('dun'), canvas_img, textinput_window))
+    canvas.tag_bind(imgitem2, "<Button-1>", submittext)
     canvas.tag_bind(imgitem2, "<Enter>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img_hover2))
     canvas.tag_bind(imgitem2,"<Leave>", lambda e: canvas.itemconfig(imgitem2, image=canvas.filepic_img2) )
     canvas.create_text(13, 13, text="Your words", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='nw')
@@ -372,11 +391,5 @@ def welcome():
     canvas.tag_bind(continuebtn2, "<Leave>", leave)
     canvas.tag_bind(continuebtn, "<Button-1>", lambda e: fademain(canvas, canvasbg))
     canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: fademain(canvas, canvasbg))
-
-
-
-
-
-
 welcome()
 app.mainloop()
