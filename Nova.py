@@ -46,6 +46,26 @@ Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "cl
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
 Example: "volume 50" → {"actions": [{"action": "set_volume", "value": 50}]}
 """
+def askgroq(user_text):
+    try: 
+        response = client.chat.completions.create(model="llama3-70b-8192", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "context": user_text}], max_tokens=500)
+        raw = response.choices[0].message.content.strip()
+        parsed = json.loads(raw)
+        return parsed
+    except Exception as e:
+        print(f"Groq sold bruuu: {e}")
+        return {"actions": [{"action": 'unknown'}]}
+def exectuteactions(actions):
+    for a in actions:
+        action = a.get("action")
+        value = a.get("value")
+        try:
+            if action == "set_volume":
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                volume = cast(interface, POINTER(IAudioEndpointVolume))
+                volume.SetMasterVolumeLevelScalar(int(value)/ 100, None)
+                
 ctk.set_appearance_mode('dark')
 app=ctk.CTk()
 app.resizable(False, False)
