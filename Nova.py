@@ -41,13 +41,17 @@ Available actions:
 - press_key (value: key e.g. "ctrl+c", "alt+f4", "win+d")
 - sleep_pc
 - lock_pc
+-speak_response (value: the response to say out loud, for questions and answers that don't need typing)
 - unknown
 You can chain multiple actions for complex tasks.
 Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "close_app", "value": "discord"}, {"action": "open_app", "value": "spotify"}]}
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
 Example: "volume 50" → {"actions": [{"action": "set_volume", "value": 50}]}
-If the user asks to write, summarize, explain, or answer a question (not a system action), use the type_text with the full response as the value.. If the request is unrelated to computer control or writing, use unknown. When doing summaries and things like that,
-don't say something like "Here's a 100 word summary" at the start. 
+Example: "what is the capital of France" → {"actions": [{"action": "speak_response", "value": "The capital of France is Paris"}]}
+If the user asks a question, always use speak_response, never type_text
+If the user says"write", "type", "draft", "compose" etc... use type_text
+If it is a system command, use the correct action
+unknow only if completely unrealted to everything above
 """
 def askgroq(user_text):
     try: 
@@ -87,6 +91,8 @@ def exectuteactions(actions):
             elif action == "screenshot":
                 import time
                 pyautogui.screenshot(f"screenshot_{int(time.time())}.png")
+            elif action == "speak_response":
+                speak(value)
             elif action =="open_app":
                 subprocess.Popen(["start", value], shell=True)
             elif action == "close_app":
