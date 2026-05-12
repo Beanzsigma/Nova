@@ -67,20 +67,12 @@ def exectuteactions(actions):
         value = a.get("value")
         try:
             if action == "set_volume":
-                devices = AudioUtilities.GetSpeakers()
-                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-                volume = cast(interface, POINTER(IAudioEndpointVolume))
-                volume.SetMasterVolumeLevelScalar(int(value)/ 100, None)
+                vol = int(int(value) * 65535/100)
+                subprocess.Popen([getpath("nir/nircmd.exe"), "setsysvolume", str(vol)])
             elif action == "mute_volume":
-                devices = AudioUtilities.GetSpeakers()
-                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-                volume = cast(interface, POINTER(IAudioEndpointVolume))
-                volume.SetMute(1, None)
+                subprocess.Popen([getpath("nir/nircmd.exe"), "mutesysvolume", "1"])
             elif action == "unmute_volume":
-                devices = AudioUtilities.GetSpeakers()
-                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-                volume = cast(interface, POINTER(IAudioEndpointVolume))
-                volume.SetMute(0, None)
+                subprocess.Popen([getpath("nir/nircmd.exe"), "mutesysvolume", "0"])
             elif action == "screenshot":
                 import time
                 pyautogui.screenshot(f"screenshot_{int(time.time())}.png")
