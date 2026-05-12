@@ -18,7 +18,9 @@ from tkinter import Canvas, Text
 from PIL import Image, ImageSequence, ImageTk
 import os
 import sys
-GROQkey = "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"
+from dotenv import load_dotenv
+load_dotenv()
+GROQkey = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQkey)
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
 The user will give you a natural language command.
