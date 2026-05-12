@@ -45,17 +45,23 @@ You can chain multiple actions for complex tasks.
 Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "close_app", "value": "discord"}, {"action": "open_app", "value": "spotify"}]}
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
 Example: "volume 50" → {"actions": [{"action": "set_volume", "value": 50}]}
+If the user asks to write, summarize, explain, or answer a question (not a system action), use the type_text with the full response as the value.. If the request is unrelated to computer control or writing, use unknown. When doing summaries and things like that,
+don't say something like "Here's a 100 word summary" at the start. 
 """
 def askgroq(user_text):
     try: 
-        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=500)
+        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=2000)
         raw = response.choices[0].message.content.strip()
+        raw=raw.replace("```json","").replace("```", "").strip()
+        print(f"Groq: {raw}")
         parsed = json.loads(raw)
         return parsed
     except Exception as e:
         print(f"Groq sold bruuu: {e}")
         return {"actions": [{"action": 'unknown'}]}
 def exectuteactions(actions):
+    import pythoncom
+    pythoncom.CoInitialize()
     for a in actions:
         action = a.get("action")
         value = a.get("value")
@@ -84,6 +90,8 @@ def exectuteactions(actions):
                 subprocess.Popen(["taskkill", "/f", "/im", f"{value}.exe"], shell=True)
             elif action == "open_url":
                 subprocess.Popen(["start", value], shell=True)
+            elif action == "type_text":
+                pyautogui.write(value, interval=0.05)
             elif action == "press_key":
                 pyautogui.hotkey(*value.split("+"))
             elif action == "lock_pc":
