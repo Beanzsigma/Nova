@@ -3,6 +3,7 @@ import sounddevice as sd
 import numpy as np
 import threading 
 import queue
+import pythoncom
 after_id = None
 from groq import Groq
 import json 
@@ -59,8 +60,18 @@ def askgroq(user_text):
     except Exception as e:
         print(f"Groq sold bruuu: {e}")
         return {"actions": [{"action": 'unknown'}]}
+import pyttsx3
+def speak(text):
+    def run():
+        pythoncom.CoInitialize()
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 150)
+        engine.setProperty('volume', 1.0)
+        engine.say(text)
+        engine.runAndWait()
+        pythoncom.CoUninitialize()
+    threading.Thread(target=run, daemon=True).start()
 def exectuteactions(actions):
-    import pythoncom
     pythoncom.CoInitialize()
     for a in actions:
         action = a.get("action")
@@ -83,6 +94,7 @@ def exectuteactions(actions):
             elif action == "open_url":
                 subprocess.Popen(["start", value], shell=True)
             elif action == "type_text":
+                speak(value)
                 pyautogui.write(value, interval=0.05)
             elif action == "press_key":
                 pyautogui.hotkey(*value.split("+"))
