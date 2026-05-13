@@ -52,6 +52,8 @@ If the user asks a question, always use speak_response, never type_text
 If the user says"write", "type", "draft", "compose" etc... use type_text
 If it is a system command, use the correct action
 unknow only if completely unrealted to everything above
+When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 words. 
 """
 def askgroq(user_text):
     try: 
@@ -188,6 +190,7 @@ def gifbg():
     animate()
     return canvas, canvasbg
 load_font(getpath('Fonts/Necosmic-PersonalUse.otf'))
+load_font(getpath("Fonts/PressStart2P-Regular.ttf"))
 def fadein(canvas):
     overlay = canvas.create_rectangle(0, 0, 700, 500, fill='black', state='normal')
     stipples = ["gray75", "gray50", "gray25", "gray12"]
@@ -273,7 +276,7 @@ def main(canvas, canvas_img):
     recording = [False]
     rectextshdw = canvas.create_text(86, 266, text="", font=('Necosmic Personal Use', 11), fill="#0a2e18")
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
-    textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Necosmic Personal Use', 13))
+    textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Press Start 2P', 13))
     textinput_window = canvas.create_window(495, 150, window=textinput, anchor='center')
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
