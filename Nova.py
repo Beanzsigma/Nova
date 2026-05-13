@@ -77,7 +77,7 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
-def exectuteactions(actions):
+def exectuteactions(actions, update_ui=None):
     pythoncom.CoInitialize()
     for a in actions:
         action = a.get("action")
@@ -95,6 +95,8 @@ def exectuteactions(actions):
                 pyautogui.screenshot(f"screenshot_{int(time.time())}.png")
             elif action == "speak_response":
                 speak(value)
+                if update_ui:
+                    update_ui(value)
             elif action =="open_app":
                 subprocess.Popen(["start", value], shell=True)
             elif action == "close_app":
@@ -278,6 +280,12 @@ def main(canvas, canvas_img):
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
     textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Press Start 2P', 13))
     textinput_window = canvas.create_window(495, 150, window=textinput, anchor='center')
+    responsetext_shdw = canvas.create_text(523, 175, text="", font=("Press Start 2P", 13), fill="#0a2e18", anchor="n", width=290)
+    responsetext= canvas.create_text(520, 172, text="", font=("Press Start 2P", 13), fill="#319950", anchor="n", width=290)
+    leftresponseshdw = canvas.create_text(237, 128, text="", font=('Press Start 2P', 13), fill="#0a2e18", anchor='n', width=220)
+    lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
+    fullresbutton1shdw = canvas.create_text(227, 238, text="Full Answer", font=('Necosmic Personal use', 15), fill="#0a2e18")
+    fullresbutton1 = canvas.create_text(224, 235, text="Full Answer", font=("Necosmic Personal use", 15), fill="#319950")
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
@@ -290,7 +298,10 @@ def main(canvas, canvas_img):
                 def run_groq():
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
-                    exectuteactions(actions)
+                    def update_ui (text):
+                        app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
+                        app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
+                    exectuteactions(actions, update_ui)
                 threading.Thread(target=run_groq, daemon=True).start()
             showaigif(canvas, on_done, canvas_img, textinput_window)
         except queue.Empty:
@@ -311,14 +322,17 @@ def main(canvas, canvas_img):
             canvas.itemconfig(rectext, text="Processing...")
             canvas.itemconfig(rectextshdw, text="Processing...")
     def submittext(e):
-        text= textinput.get().strip()
+        text = textinput.get().strip()
         if text:
             textinput.delete(0, 'end')
             def on_done():
                 def run_groq():
                     parsed = askgroq(text)
                     actions = parsed.get("actions", [])
-                    exectuteactions(actions)
+                    def update_ui(t):
+                        app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
+                        app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
+                    exectuteactions(actions, update_ui)
                 threading.Thread(target=run_groq, daemon=True).start()
             showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
