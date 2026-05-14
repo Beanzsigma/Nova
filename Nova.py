@@ -284,8 +284,18 @@ def main(canvas, canvas_img):
     responsetext= canvas.create_text(520, 172, text="", font=("Press Start 2P", 13), fill="#319950", anchor="n", width=290)
     leftresponseshdw = canvas.create_text(237, 128, text="", font=('Press Start 2P', 13), fill="#0a2e18", anchor='n', width=220)
     lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
-    fullresbutton1shdw = canvas.create_text(227, 238, text="Full Answer", font=('Necosmic Personal use', 15), fill="#0a2e18")
-    fullresbutton1 = canvas.create_text(224, 235, text="Full Answer", font=("Necosmic Personal use", 15), fill="#319950")
+    fullresbutton1shdw = canvas.create_text(244, 259, text="Full Answer", font=('Necosmic Personal use', 12), fill="#0a2e18")
+    fullresbutton1 = canvas.create_text(241, 256, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
+    def enter1(e):
+        canvas.itemconfig(fullresbutton1,fill="#0F4423" )
+        canvas.itemconfig(fullresbutton1shdw, fill="#0E0D0D")
+    def leave1(e):
+        canvas.itemconfig(fullresbutton1, fill="#319950")
+        canvas.itemconfig(fullresbutton1shdw, fill='#0a2e18')
+    canvas.tag_bind(fullresbutton1, "<Enter>", enter1)
+    canvas.tag_bind(fullresbutton1shdw, "<Enter>", enter1)
+    canvas.tag_bind(fullresbutton1shdw, "<Leave>", leave1)
+    canvas.tag_bind(fullresbutton1, "<Leave>", leave1)
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
