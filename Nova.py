@@ -53,7 +53,7 @@ If the user says"write", "type", "draft", "compose" etc... use type_text
 If it is a system command, use the correct action
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
-you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 words. 
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 11 words. 
 """
 def askgroq(user_text):
     try: 
@@ -260,7 +260,16 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
     canvas.after(5000, done)
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
+    lastfullresponse = [None]
     lastresult = [None]
+    fullanswerready = [False]
+    def getfullanswer(result):
+        def run():
+            response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
+                                                       {"role": "user", "content": result} ], max_tokens=500)
+            full = response.choices[0].message.content.strip()
+            speak(full)
+        threading.Thread(target=run, daemon=True).start()
     normalimg = Image.open(getpath("Images/GIFS/mic2.png")).resize((125, 125))
     newnormalimg = normalimg.point(lambda p:min(255, int(p * 1)))
     hoverimg = newnormalimg.point(lambda p:min (255, int(p*1/1.6)))
@@ -286,6 +295,10 @@ def main(canvas, canvas_img):
     lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
     fullresbutton1shdw = canvas.create_text(244, 259, text="Full Answer", font=('Necosmic Personal use', 12), fill="#0a2e18")
     fullresbutton1 = canvas.create_text(241, 256, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
+    fullresbutton2shdw = canvas.create_text(524, 269, text="Full Answer", font=("Necosmic Personal use", 12), fill="#0a2e18")
+    fullresbutton2 = canvas.create_text(521, 266, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
+    rounded_rect(canvas, 448, 255, 593, 280, r=9, color="#319950", width=3)
+    rounded_rect(canvas, 165, 244, 315, 270, r=9, color="#319950", width=3)
     def enter1(e):
         canvas.itemconfig(fullresbutton1,fill="#0F4423" )
         canvas.itemconfig(fullresbutton1shdw, fill="#0E0D0D")
@@ -296,10 +309,36 @@ def main(canvas, canvas_img):
     canvas.tag_bind(fullresbutton1shdw, "<Enter>", enter1)
     canvas.tag_bind(fullresbutton1shdw, "<Leave>", leave1)
     canvas.tag_bind(fullresbutton1, "<Leave>", leave1)
+    def enter2(e):
+        canvas.itemconfig(fullresbutton2, fill="#0F4423")
+        canvas.itemconfig(fullresbutton2shdw, fill="#0E0D0D")
+    def leave2(e):
+        canvas.itemconfig(fullresbutton2, fill="#319950")
+        canvas.itemconfig(fullresbutton2shdw, fill="#0a2e18")
+    def fullanswerclick(e):
+        if not lastresult[0]:
+            return
+        result = lastresult[0]
+        def on_done():
+            def run():
+                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown"},
+                                                                                                     {'role': "user", 'content': result}], max_tokens=500) 
+                full = response.choices[0].message.content.strip
+            getfullanswer(lastresult[0])
+        showaigif(canvas, on_done, canvas_img, textinput_window)
+    canvas.tag_bind(fullresbutton2, "<Enter>", enter2)
+    canvas.tag_bind(fullresbutton2shdw, "<Enter>", enter2)
+    canvas.tag_bind(fullresbutton2, "<Leave>", leave2)
+    canvas.tag_bind(fullresbutton2shdw, "<Leave>", leave2)
+    canvas.tag_bind(fullresbutton1, "<Button-1>", fullanswerclick)
+    canvas.tag_bind(fullresbutton1shdw, "<Button-1>",fullanswerclick)
+    canvas.tag_bind(fullresbutton2, "<Button-1>", fullanswerclick)
+    canvas.tag_bind(fullresbutton2shdw, "<Button-1>", fullanswerclick)
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
             lastresult[0] = result 
+            fullanswerready[0] = True
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
             def on_done():
