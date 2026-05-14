@@ -54,6 +54,7 @@ If it is a system command, use the correct action
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
 you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 words. 
+For any action that has visible effect(open_app, open_url, close_app) , include a speak_response action about that app. Like for youtube.com, you would just say "Opening Youtube" or something like that
 """
 def askgroq(user_text):
     try: 
@@ -99,10 +100,13 @@ def exectuteactions(actions, update_ui=None):
                     update_ui(value)
             elif action =="open_app":
                 subprocess.Popen(["start", value], shell=True)
+                announce(f"Opening {value}")
             elif action == "close_app":
                 subprocess.Popen(["taskkill", "/f", "/im", f"{value}.exe"], shell=True)
+                announce(f"Closing {value}")
             elif action == "open_url":
                 subprocess.Popen(["start", value], shell=True)
+                announce("Opening website")
             elif action == "type_text":
                 speak(value)
                 pyautogui.write(value, interval=0.05)
@@ -114,6 +118,10 @@ def exectuteactions(actions, update_ui=None):
                 subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
         except Exception as e:
             print(f"errorr {action}: {e}")
+    def announce(text):
+        speak(text)
+        if update_ui:
+            update_ui(text)
 ctk.set_appearance_mode('dark')
 app=ctk.CTk()
 app.resizable(False, False)
@@ -261,7 +269,8 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
-    lastresult = [None]
+    voiceresult = [None]
+    textresult = [None]
     fullanswerready = [False]
     def getfullanswer(result):
         def run():
@@ -315,13 +324,25 @@ def main(canvas, canvas_img):
     def leave2(e):
         canvas.itemconfig(fullresbutton2, fill="#319950")
         canvas.itemconfig(fullresbutton2shdw, fill="#0a2e18")
-    def fullanswerclick(e):
-        if not lastresult[0]:
+    def fullanswerclickvoice(e):
+        if not voiceresult[0]:
             return
-        result = lastresult[0]
+        result = voiceresult[0]
         def on_done():
             def run():
-                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, don't yap for too long, just enough for a good answer that's it."},
+                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
+                                                                                                     {'role': "user", 'content': result}], max_tokens=500) 
+                full = response.choices[0].message.content.strip()
+                speak(full)
+            threading.Thread(target=run, daemon=True).start()
+        showaigif(canvas, on_done, canvas_img, textinput_window)
+    def fullanswerclicktext(e):
+        if not textresult[0]:
+            return
+        result = textresult[0]
+        def on_done():
+            def run():
+                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
                                                                                                      {'role': "user", 'content': result}], max_tokens=500) 
                 full = response.choices[0].message.content.strip()
                 speak(full)
@@ -331,14 +352,14 @@ def main(canvas, canvas_img):
     canvas.tag_bind(fullresbutton2shdw, "<Enter>", enter2)
     canvas.tag_bind(fullresbutton2, "<Leave>", leave2)
     canvas.tag_bind(fullresbutton2shdw, "<Leave>", leave2)
-    canvas.tag_bind(fullresbutton1, "<Button-1>", fullanswerclick)
-    canvas.tag_bind(fullresbutton1shdw, "<Button-1>",fullanswerclick)
-    canvas.tag_bind(fullresbutton2, "<Button-1>", fullanswerclick)
-    canvas.tag_bind(fullresbutton2shdw, "<Button-1>", fullanswerclick)
+    canvas.tag_bind(fullresbutton1, "<Button-1>", fullanswerclickvoice)
+    canvas.tag_bind(fullresbutton1shdw, "<Button-1>", fullanswerclickvoice)
+    canvas.tag_bind(fullresbutton2, "<Button-1>", fullanswerclicktext)
+    canvas.tag_bind(fullresbutton2shdw, "<Button-1>", fullanswerclicktext)
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
-            lastresult[0] = result 
+            voiceresult[0] = result 
             fullanswerready[0] = True
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
@@ -374,7 +395,7 @@ def main(canvas, canvas_img):
     def submittext(e):
         text = textinput.get().strip()
         if text:
-            lastresult[0] = text
+            textresult[0] = text
             textinput.delete(0, 'end')
             def on_done():
                 def run_groq():
