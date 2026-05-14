@@ -53,7 +53,7 @@ If the user says"write", "type", "draft", "compose" etc... use type_text
 If it is a system command, use the correct action
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
-you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 11 words. 
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 words. 
 """
 def askgroq(user_text):
     try: 
@@ -321,10 +321,11 @@ def main(canvas, canvas_img):
         result = lastresult[0]
         def on_done():
             def run():
-                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown"},
+                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, don't yap for too long, just enough for a good answer that's it."},
                                                                                                      {'role': "user", 'content': result}], max_tokens=500) 
-                full = response.choices[0].message.content.strip
-            getfullanswer(lastresult[0])
+                full = response.choices[0].message.content.strip()
+                speak(full)
+            threading.Thread(target=run, daemon=True).start()
         showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(fullresbutton2, "<Enter>", enter2)
     canvas.tag_bind(fullresbutton2shdw, "<Enter>", enter2)
@@ -373,6 +374,7 @@ def main(canvas, canvas_img):
     def submittext(e):
         text = textinput.get().strip()
         if text:
+            lastresult[0] = text
             textinput.delete(0, 'end')
             def on_done():
                 def run_groq():
