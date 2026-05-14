@@ -369,6 +369,9 @@ def main(canvas, canvas_img):
                 def run_groq():
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
+                    if actions and actions[0].get("action") == "unknown":
+                        app.after(0, lambda: canvas.itemconfig(lefresponse, text="I don't understand"))
+                        app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text="I don't understand"))
                     def update_ui (text):
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
@@ -401,6 +404,10 @@ def main(canvas, canvas_img):
                 def run_groq():
                     parsed = askgroq(text)
                     actions = parsed.get("actions", [])
+                    if actions and actions[0].get("action") == "unknown":
+                        msg = "I don't understand"
+                        app.after(0, lambda: canvas.itemconfig(responsetext, text=msg))
+                        app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=msg))
                     def update_ui(t):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
