@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from typing import Optional
 from tkinter import Canvas, Text
 from PIL import Image, ImageSequence, ImageTk
+import cv2
 import os
 import sys
 from dotenv import load_dotenv
@@ -116,34 +117,62 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 print(f"Ss here: {fullpath}")
                 os.startfile(fullpath)
             elif action == "read_screen":
-                import re
+                import cv2
+                import numpy as np
                 requestid = time.time()
-                ss = pyautogui.screenshot()
-                ss = ss.convert("L")
-                ss = ss.point(lambda x: 0 if x < 180 else 255)
-                ss = ss.resize((ss.width * 2, ss.height * 2))
-                text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6")
+                ss= pyautogui.screenshot()
+                img = cv2.cvtColor(np.array(ss), cv2.COLOR_RGB2BGR)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                gray  = cv2.resize(gray, None, fx=2.5, fy=2.5, interpolation =cv2.INTER_CUBIC)
+                gray = cv2.bilateralFilter(gray, 9, 75, 75)
+                thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 7)
+                kernel = np.ones((2, 2), np.uint8)
+                thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+                config = r"--oem 3 --psm 6"
+                text= pytesseract.image_to_string(thresh, config=config)
                 text= text.strip()
-                if not text.strip():
-                    text = "No readable text found on screen"
-                def summarizescreen(reqid =requestid):
+                if not text:
+                    text= "No readable text found on screen"
+                def summarizescreen(reqid=requestid):
                     try:
-                        response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=[
-                                {"role": "system", "content": "You are given OCR text from a screen and a user question. Answer the question based on the screen content. Max 10 words."},
-                                {"role": "user", "content": f"Screen text:\n{text[:1000]}\n\nUser question:\n{user_text}"}
-                            ],
-                            max_tokens=50
-                        )
+                        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
+                        }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=80)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
                             return
                         speak(summary)
                         app.after(0, lambda: update_ui(summary) if update_ui else None)
-                    except Exception as e:
-                        announce(text[:60])
+                    except Exception:
+                        announce(text[:80])
                 threading.Thread(target=summarizescreen, daemon=True).start()
+                # import re
+                # requestid = time.time()
+                # ss = pyautogui.screenshot()
+                # ss = ss.convert("L")
+                # ss = ss.point(lambda x: 0 if x < 180 else 255)
+                # ss = ss.resize((ss.width * 2, ss.height * 2))
+                # text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6")
+                # text= text.strip()
+                # if not text.strip():
+                #     text = "No readable text found on screen"
+                # def summarizescreen(reqid =requestid):
+                #     try:
+                #         response = client.chat.completions.create(
+                #             model="llama-3.3-70b-versatile",
+                #             messages=[
+                #                 {"role": "system", "content": "You are given OCR text from a screen and a user question. Answer the question based on the screen content. Max 10 words."},
+                #                 {"role": "user", "content": f"Screen text:\n{text[:1000]}\n\nUser question:\n{user_text}"}
+                #             ],
+                #             max_tokens=50
+                #         )
+                #         summary = response.choices[0].message.content.strip()
+                #         if reqid != requestid:
+                #             return
+                #         speak(summary)
+                #         app.after(0, lambda: update_ui(summary) if update_ui else None)
+                #     except Exception as e:
+                #         announce(text[:60])
+                # threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == "speak_response":
                 if hasreadscreen:
                     continue
