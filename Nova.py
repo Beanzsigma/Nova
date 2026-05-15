@@ -3,6 +3,7 @@ import sounddevice as sd
 import numpy as np
 import threading 
 import pytesseract
+import time
 import queue
 import pythoncom
 after_id = None
@@ -61,8 +62,8 @@ For any action that has visible effect(open_app, open_url, close_app) , include 
 Another thing. When announcing the read screen thing, don't say everything on the screen, just say the main things. Like if I ask what the answer to this problem is on my screen, just answer it. If I ask
 what my screen is about, give a brief description.
 WHEN USING read_screen:
-describe only what is on the screen
-max 10 words hard cap
+If user asks WHAT IS ON SCREEN → max 10 words
+If user asks QUESTION ABOUT SCREEN → normal answer allowed
 no explanations, or thing like that. exeption for questions about screen like solving a problem
 If OCR text is missing or incomplete, infer from context instead of saying unclear.
 """
@@ -107,7 +108,6 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "unmute_volume":
                 subprocess.Popen([getpath("nir/nircmd.exe"), "mutesysvolume", "0"])
             elif action == "screenshot":
-                import time
                 picturefider = os.path.join(os.environ["USERPROFILE"], "Pictures")
                 filename = f"screenshot_{int(time.time())}.png"
                 fullpath = os.path.join(picturefider, filename)
@@ -117,14 +117,16 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 os.startfile(fullpath)
             elif action == "read_screen":
                 import re
+                requestid = time.time()
                 ss = pyautogui.screenshot()
                 ss = ss.convert("L")
-                ss = ss.resize((ss.width*2, ss.height*2))
-                text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6 -c preserve_interword_spaces=1")
+                ss = ss.point(lambda x: 0 if x < 180 else 255)
+                ss = ss.resize((ss.width * 2, ss.height * 2))
+                text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6")
                 text= text.strip()
                 if not text.strip():
                     text = "No readable text found on screen"
-                def summarizescreen():
+                def summarizescreen(reqid =requestid):
                     try:
                         response = client.chat.completions.create(
                             model="llama-3.3-70b-versatile",
@@ -135,6 +137,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                             max_tokens=50
                         )
                         summary = response.choices[0].message.content.strip()
+                        if reqid != requestid:
+                            return
                         speak(summary)
                         app.after(0, lambda: update_ui(summary) if update_ui else None)
                     except Exception as e:
@@ -191,7 +195,7 @@ recordingactive  = [False]
 def listenvoice(q):
     samplerate = 16000
     chunks = []
-    def callback(indata, frames, time, status):
+    def callback(indata, frames, timestamp, status):
         if recordingactive[0]:
             chunks.append(indata.copy())
     with sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", callback=callback):
