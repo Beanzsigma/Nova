@@ -53,12 +53,12 @@ If the user says"write", "type", "draft", "compose" etc... use type_text
 If it is a system command, use the correct action
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
-you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 words. 
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
 For any action that has visible effect(open_app, open_url, close_app) , include a speak_response action about that app. Like for youtube.com, you would just say "Opening Youtube" or something like that
 """
 def askgroq(user_text):
     try: 
-        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=2000)
+        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=350)
         raw = response.choices[0].message.content.strip()
         raw=raw.replace("```json","").replace("```", "").strip()
         print(f"Groq: {raw}")
@@ -93,7 +93,13 @@ def exectuteactions(actions, update_ui=None):
                 subprocess.Popen([getpath("nir/nircmd.exe"), "mutesysvolume", "0"])
             elif action == "screenshot":
                 import time
-                pyautogui.screenshot(f"screenshot_{int(time.time())}.png")
+                picturefider = os.path.join(os.environ["USERPROFILE"], "Pictures")
+                filename = f"screenshot_{int(time.time())}.png"
+                fullpath = os.path.join(picturefider, filename)
+                ss = pyautogui.screenshot()
+                ss.save(fullpath)
+                print(f"Ss here: {fullpath}")
+                os.startfile(fullpath)
             elif action == "speak_response":
                 speak(value)
                 if update_ui:
@@ -275,7 +281,7 @@ def main(canvas, canvas_img):
     def getfullanswer(result):
         def run():
             response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
-                                                       {"role": "user", "content": result} ], max_tokens=500)
+                                                       {"role": "user", "content": result} ], max_tokens=350)
             full = response.choices[0].message.content.strip()
             speak(full)
         threading.Thread(target=run, daemon=True).start()
@@ -331,7 +337,7 @@ def main(canvas, canvas_img):
         def on_done():
             def run():
                 response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
-                                                                                                     {'role': "user", 'content': result}], max_tokens=500) 
+                                                                                                     {'role': "user", 'content': result}], max_tokens=350) 
                 full = response.choices[0].message.content.strip()
                 speak(full)
             threading.Thread(target=run, daemon=True).start()
@@ -343,7 +349,7 @@ def main(canvas, canvas_img):
         def on_done():
             def run():
                 response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
-                                                                                                     {'role': "user", 'content': result}], max_tokens=500) 
+                                                                                                     {'role': "user", 'content': result}], max_tokens=350) 
                 full = response.choices[0].message.content.strip()
                 speak(full)
             threading.Thread(target=run, daemon=True).start()
