@@ -2,6 +2,7 @@ import customtkinter as ctk
 import sounddevice as sd
 import numpy as np
 import threading 
+import pytesseract
 import queue
 import pythoncom
 after_id = None
@@ -21,6 +22,7 @@ import os
 import sys
 from dotenv import load_dotenv
 load_dotenv()
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 GROQkey = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQkey)
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
@@ -43,6 +45,7 @@ Available actions:
 - lock_pc
 -speak_response (value: the response to say out loud, for questions and answers that don't need typing)
 - unknown
+-read_screen
 You can chain multiple actions for complex tasks.
 Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "close_app", "value": "discord"}, {"action": "open_app", "value": "spotify"}]}
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
@@ -55,6 +58,13 @@ unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
 you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
 For any action that has visible effect(open_app, open_url, close_app) , include a speak_response action about that app. Like for youtube.com, you would just say "Opening Youtube" or something like that
+Another thing. When announcing the read screen thing, don't say everything on the screen, just say the main things. Like if I ask what the answer to this problem is on my screen, just answer it. If I ask
+what my screen is about, give a brief description.
+WHEN USING read_screen:
+describe only what is on the screen
+max 10 words hard cap
+no explanations, or thing like that. exeption for questions about screen like solving a problem
+If OCR text is missing or incomplete, infer from context instead of saying unclear.
 """
 def askgroq(user_text):
     try: 
@@ -78,8 +88,13 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
-def exectuteactions(actions, update_ui=None):
+def exectuteactions(actions, update_ui=None, user_text=""):
+    hasreadscreen = any(a.get(""))
     pythoncom.CoInitialize()
+    def announce(text):
+        speak(text)
+        if update_ui:
+            app.after(0, lambda: update_ui(text))
     for a in actions:
         action = a.get("action")
         value = a.get("value")
@@ -100,6 +115,30 @@ def exectuteactions(actions, update_ui=None):
                 ss.save(fullpath)
                 print(f"Ss here: {fullpath}")
                 os.startfile(fullpath)
+            elif action == "read_screen":
+                import re
+                ss = pyautogui.screenshot()
+                ss = ss.convert("L")
+                ss = ss.resize((ss.width*2, ss.height*2))
+                text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6 -c preserve_interword_spaces=1")
+                text= text.strip()
+                if not text.strip():
+                    text = "No readable text found on screen"
+                def summarizescreen():
+                    try:
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[
+                                {"role": "system", "content": "You are given OCR text from a screen and a user question. Answer the question based on the screen content. Max 10 words."},
+                                {"role": "user", "content": f"Screen text:\n{text[:1000]}\n\nUser question:\n{user_text}"}
+                            ],
+                            max_tokens=50
+                        )
+                        summary = response.choices[0].message.content.strip()
+                        announce(summary)
+                    except Exception as e:
+                        announce(text[:60])
+                threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == "speak_response":
                 speak(value)
                 if update_ui:
@@ -124,10 +163,6 @@ def exectuteactions(actions, update_ui=None):
                 subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
         except Exception as e:
             print(f"errorr {action}: {e}")
-    def announce(text):
-        speak(text)
-        if update_ui:
-            update_ui(text)
 ctk.set_appearance_mode('dark')
 app=ctk.CTk()
 app.resizable(False, False)
@@ -381,7 +416,7 @@ def main(canvas, canvas_img):
                     def update_ui (text):
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
-                    exectuteactions(actions, update_ui)
+                    exectuteactions(actions, update_ui, result)
                 threading.Thread(target=run_groq, daemon=True).start()
             showaigif(canvas, on_done, canvas_img, textinput_window)
         except queue.Empty:
@@ -417,7 +452,7 @@ def main(canvas, canvas_img):
                     def update_ui(t):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
-                    exectuteactions(actions, update_ui)
+                    exectuteactions(actions, update_ui, text)
                 threading.Thread(target=run_groq, daemon=True).start()
             showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
