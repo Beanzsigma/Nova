@@ -89,7 +89,7 @@ def speak(text):
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
 def exectuteactions(actions, update_ui=None, user_text=""):
-    hasreadscreen = any(a.get(""))
+    hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
     def announce(text):
         speak(text)
@@ -135,11 +135,14 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                             max_tokens=50
                         )
                         summary = response.choices[0].message.content.strip()
-                        announce(summary)
+                        speak(summary)
+                        app.after(0, lambda: update_ui(summary) if update_ui else None)
                     except Exception as e:
                         announce(text[:60])
                 threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == "speak_response":
+                if hasreadscreen:
+                    continue
                 speak(value)
                 if update_ui:
                     update_ui(value)
