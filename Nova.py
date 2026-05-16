@@ -274,6 +274,8 @@ def gifbg():
     canvasbg = canvas.create_image(0, 0, anchor="nw")
     def animate(frame_index=0):
         global after_id
+        if canvasbg is None:
+            return
         canvas.itemconfig(canvasbg, image=frames[frame_index])
         canvas._frames = frames
         after_id = app.after(20, animate, (frame_index+1) % len(frames))
@@ -597,7 +599,22 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(voicecheck, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtn, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtnshdw, "<Button-1>", togglebutton)
-    backbtnshdw = 
+    backbtnshdw = canvas.create_text(73, 55, text="Return", font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    backbtn = canvas.create_text(70, 52, text="Return", font=('Necosmic Personal Use', 18), fill="#319950")
+    def backenter(e):
+        canvas.itemconfig(backbtn, fill="#0F4423")
+        canvas.itemconfig(backbtnshdw, fill="#0E0D0D")
+    def backleave(e):
+        canvas.itemconfig(backbtn, fill="#319950")
+        canvas.itemconfig(backbtnshdw, fill="#0a2e18")
+    def back(e):
+        main(canvas, canvas_img)
+    canvas.tag_bind(backbtn, "<Button-1>", back)
+    canvas.tag_bind(backbtnshdw, "<Button-1>", back)
+    canvas.tag_bind(backbtn, "<Leave>", backleave)
+    canvas.tag_bind(backbtnshdw, "<Leave>", backleave)
+    canvas.tag_bind(backbtn, "<Enter>", backenter)
+    canvas.tag_bind(backbtnshdw, "<Enter>", backenter)
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
