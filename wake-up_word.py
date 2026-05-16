@@ -1,25 +1,36 @@
-from openwakeword.model import Model
+import speech_recognition as sr
 import sounddevice as sd
 import time
+import io
+import wave
 import numpy as np
-model = Model()
-samplerate = 16000
-chunksize = 1280
-lastrigger = 0
-cooldown = 4
-def callback(indata, frames, time_info, status):
-    global lastrigger
-    audio = indata.flatten().astype(np.int16)
-    prediction = model.predict(audio)
-    for wakeword, score in prediction.items():
-        if score > 0.5:
-            current = time.time()
-            if current - lastrigger >cooldown:
-                lastrigger = current
-                print("detect")
-stream = sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", blocksize=chunksize, callback=callback)
-with stream:
-    print('i hear u bru')
-    while True:
-        sd.sleep(1000)
-
+recognizer = sr.Recognizer()
+wakeword = "nova"
+cooldown = 3
+last_trigger = 0
+samplerate= 16000
+duration = 1
+print("im listening")
+while True:
+    try:
+        recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype="int16")
+        sd.wait()
+        wav_buffer = io.BytesIO()
+        with wave.open(wav_buffer, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(samplerate)
+            wf.writeframes(recording.tobytes())
+        wav_buffer.seek(0)
+        with sr.AudioFile(wav_buffer) as source:
+            audio = recognizer.record(source)
+        text = recognizer.recognize_google(audio).lower()
+        print("heard it", text)
+        current = time.time()
+        if wakeword in text and current - last_trigger >cooldown:
+            last_trigger = current
+            print('detected word')
+    except sr.UnknownValueError:
+        pass
+    except Exception as e:
+        print(e)
