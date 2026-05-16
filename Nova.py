@@ -6,6 +6,7 @@ import pytesseract
 import time
 import queue
 import pythoncom
+voiceenabled = [True]
 after_id = None
 from groq import Groq
 import json 
@@ -81,6 +82,8 @@ def askgroq(user_text):
         return {"actions": [{"action": 'unknown'}]}
 import pyttsx3
 def speak(text):
+    if not voiceenabled[0]:
+        return
     def run():
         pythoncom.CoInitialize()
         engine = pyttsx3.init()
@@ -577,10 +580,12 @@ def settings(canvas, canvas_img):
     clear(canvas, canvas_img)
     canvas.create_text(353, 63, text="Settings", font=("Necosmic Personal Use", 38), fill="#0a2e18")
     canvas.create_text(350, 60, text="Settings", font=('Necosmic Personal Use', 38), fill="#319950")
-    voicecheckstate = [True]
-    voicecheck = canvas.create_rectangle(148, 302, 168, 322,outline='#319950',width=2,fill="black",stipple="gray12")
-    voicebtnshdw = canvas.create_text(161, 315,text="✓",font=("Arial", 14),fill="#0a2e18")
-    voicebtn = canvas.create_text(158, 312,text="✓",font=("Arial", 14),fill="#319950")
+    voicecheckstate = voiceenabled
+    voicecheck = canvas.create_rectangle(148, 122, 168, 142,outline='#319950',width=2,fill="black",stipple="gray12")
+    voicebtnshdw = canvas.create_text(161, 135,text="✓",font=("Arial", 14),fill="#0a2e18")
+    voicebtn = canvas.create_text(158, 132,text="✓",font=("Arial", 14),fill="#319950")
+    canvas.create_text(343, 133, text="Voice Responses", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
+    canvas.create_text(340, 130, text="Voice Responses", font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
     def togglebutton(e):
         voicecheckstate[0] = not voicecheckstate[0]
         canvas.itemconfig(
@@ -592,6 +597,7 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(voicecheck, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtn, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtnshdw, "<Button-1>", togglebutton)
+    backbtnshdw = 
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
