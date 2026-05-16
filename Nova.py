@@ -586,16 +586,16 @@ def settings(canvas, canvas_img):
     voicecheck = canvas.create_rectangle(148, 122, 168, 142,outline='#319950',width=2,fill="black",stipple="gray12")
     voicebtnshdw = canvas.create_text(161, 135,text="✓",font=("Arial", 14),fill="#0a2e18")
     voicebtn = canvas.create_text(158, 132,text="✓",font=("Arial", 14),fill="#319950")
+    state = "normal" if voiceenabled[0] else "hidden"
+    canvas.itemconfig(voicebtn, state=state)
+    canvas.itemconfig(voicebtnshdw, state=state)
     canvas.create_text(343, 133, text="Voice Responses", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(340, 130, text="Voice Responses", font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
     def togglebutton(e):
-        voicecheckstate[0] = not voicecheckstate[0]
-        canvas.itemconfig(
-            voicebtn,
-            state="normal" if voicecheckstate[0] else "hidden")
-        canvas.itemconfig(
-            voicebtnshdw,
-            state="normal" if voicecheckstate[0] else "hidden")
+        voiceenabled[0] = not voiceenabled[0]
+        state = "normal" if voiceenabled[0] else "hidden"
+        canvas.itemconfig(voicebtn, state=state)
+        canvas.itemconfig(voicebtnshdw, state=state)
     canvas.tag_bind(voicecheck, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtn, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtnshdw, "<Button-1>", togglebutton)
