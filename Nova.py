@@ -577,6 +577,21 @@ def settings(canvas, canvas_img):
     clear(canvas, canvas_img)
     canvas.create_text(353, 63, text="Settings", font=("Necosmic Personal Use", 38), fill="#0a2e18")
     canvas.create_text(350, 60, text="Settings", font=('Necosmic Personal Use', 38), fill="#319950")
+    voicecheckstate = [True]
+    voicecheck = canvas.create_rectangle(148, 302, 168, 322,outline='#319950',width=2,fill="black",stipple="gray12")
+    voicebtnshdw = canvas.create_text(161, 315,text="✓",font=("Arial", 14),fill="#0a2e18")
+    voicebtn = canvas.create_text(158, 312,text="✓",font=("Arial", 14),fill="#319950")
+    def togglebutton(e):
+        voicecheckstate[0] = not voicecheckstate[0]
+        canvas.itemconfig(
+            voicebtn,
+            state="normal" if voicecheckstate[0] else "hidden")
+        canvas.itemconfig(
+            voicebtnshdw,
+            state="normal" if voicecheckstate[0] else "hidden")
+    canvas.tag_bind(voicecheck, "<Button-1>", togglebutton)
+    canvas.tag_bind(voicebtn, "<Button-1>", togglebutton)
+    canvas.tag_bind(voicebtnshdw, "<Button-1>", togglebutton)
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
