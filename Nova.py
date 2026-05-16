@@ -520,6 +520,20 @@ def main(canvas, canvas_img):
     canvas.create_text(175, 100, text="Voice Input", font=("Necosmic Personal Use", 16), fill="#319950", anchor='center')
     canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
     canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
+    settingsbtnshdw = canvas.create_text(473, 55, text="⚙", font=("Arial", 24), fill="#0a2e18")
+    settingsbtn = canvas.create_text(470, 52, text="⚙", font=("Arial", 24), fill='#319950')
+    def settingent(e):
+        canvas.itemconfig(settingsbtn, fill="#0F4423")
+        canvas.itemconfig(settingsbtnshdw, fill="#0E0D0D")
+    def settinglev(e):
+        canvas.itemconfig(settingsbtnshdw, fill="#0a2e18")
+        canvas.itemconfig(settingsbtn, fill="#319950")
+    canvas.tag_bind(settingsbtn, "<Enter>", settingent)
+    canvas.tag_bind(settingsbtnshdw, "<Leave>", settinglev)
+    canvas.tag_bind(settingsbtn, "<Leave>", settinglev)
+    canvas.tag_bind(settingsbtnshdw, "<Enter>", settingent)
+    canvas.tag_bind(settingsbtn, "<Button-1>", lambda e: settings(canvas, canvas_img))
+    canvas.tag_bind(settingsbtnshdw, "<Button-1>", lambda e: settings(canvas, canvas_img))
     def animate(frame_index=0):
         global after_id
         canvas.itemconfig(canvas_img, image=frames[frame_index])
@@ -559,6 +573,10 @@ def fademain(canvas, canvasbg):
             canvas.delete(overlay)
             main(canvas, canvasbg)
     step()
+def settings(canvas, canvas_img):
+    clear(canvas, canvas_img)
+    canvas.create_text(353, 63, text="Settings", font=("Necosmic Personal Use", 38), fill="#0a2e18")
+    canvas.create_text(350, 60, text="Settings", font=('Necosmic Personal Use', 38), fill="#319950")
 def welcome():
     canvas, canvasbg = gifbg()
     canvas.create_text(355, 184, text="Nova", font=('Necosmic Personal Use', 69), fill="#0a2e18", anchor="center")         #shadow cool ;)
