@@ -264,9 +264,10 @@ for frame in ImageSequence.Iterator(gif):
         frame.putalpha(a)
         frames.append(ImageTk.PhotoImage(frame.resize((700, 500))))
 def gifbg():
-    global after_id 
+    global after_id
     if after_id:
         app.after_cancel(after_id)
+        after_id = None
     for widget in app.winfo_children():
         widget.destroy()
     canvas = Canvas(app, width=700, height=500, highlightthickness=0, bd=0, bg="black")
@@ -608,6 +609,11 @@ def settings(canvas, canvas_img):
         canvas.itemconfig(backbtn, fill="#319950")
         canvas.itemconfig(backbtnshdw, fill="#0a2e18")
     def back(e):
+        global after_id
+        if after_id:
+            app.after_cancel(after_id)
+            after_id = None
+        clear(canvas, canvas_img)
         main(canvas, canvas_img)
     canvas.tag_bind(backbtn, "<Button-1>", back)
     canvas.tag_bind(backbtnshdw, "<Button-1>", back)
