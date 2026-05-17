@@ -68,6 +68,7 @@ If user asks WHAT IS ON SCREEN → max 10 words
 If user asks QUESTION ABOUT SCREEN → normal answer allowed
 no explanations, or thing like that. exeption for questions about screen like solving a problem
 If OCR text is missing or incomplete, infer from context instead of saying unclear.
+ALSO, when using open_app, make sure the start of the app name is capitalized and everything. 
 """
 def askgroq(user_text):
     try: 
@@ -93,6 +94,27 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
+def open_app(value, announce):
+    app_name = str(value).strip().lower()
+    discord_update = os.path.expandvars(r"%LOCALAPPDATA%\Discord\Update.exe")
+    app_map = {  "steam": "steam://open/main", "discord": ["discord://", discord_update], "notepad": "notepad.exe", "calculator": "calc.exe", "chrome": "chrome","spotify": "spotify",}
+    target = app_map.get(app_name, value)
+    try:
+        if app_name == "discord":
+            try:
+                os.startfile(target[0])
+            except:
+                subprocess.Popen([target[1], "--processStart", "Discord.exe"])
+        elif isinstance(target, str) and "://" in target:
+            os.startfile(target)
+        elif isinstance(target, str) and target.endswith(".exe"):
+            subprocess.Popen([target])
+        else:
+            subprocess.Popen(f'start "" "{target}"', shell=True)
+        announce(f"Opening {app_name}")
+    except Exception as e:
+        print(f"open_app error for {app_name}: {e}")
+        announce(f"Could not open {app_name}")
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
@@ -107,8 +129,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
     for a in actions:
         action = a.get("action")
         value = a.get("value")
-        if value:
-            value=value.lower()
+        if isinstance(value, str):
+            value = value.strip()
         try:
             if action == "set_volume":
                 vol = int(int(value) * 65535/100)
@@ -192,18 +214,13 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 speak(value)
                 if update_ui:
                     update_ui(value)
-            elif action =="open_app":
-                try:
-                    os.startfile(value)
-                    announce(f"Openning {value}")
-                except Exception:
-                    subprocess.Popen(f"start{value}", shell=True)
-                    announce(f"Trying to open{value}")
+            elif action == "open_app":
+                open_app(value, announce)
             elif action == "close_app":
                 subprocess.Popen(["taskkill", "/f", "/im", f"{value}.exe"], shell=True)
                 announce(f"Closing {value}")
             elif action == "open_url":
-                subprocess.Popen(["start", value], shell=True)
+                os.startfile(value)
                 announce("Opening website")
             elif action == "type_text":
                 speak(value)
