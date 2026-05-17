@@ -99,7 +99,11 @@ def exectuteactions(actions, update_ui=None, user_text=""):
     def announce(text):
         speak(text)
         if update_ui:
-            app.after(0, lambda: update_ui(text))
+            try:
+                app.after(0, lambda: update_ui(text))
+            except:
+                if update_ui:
+                    update_ui(text)
     for a in actions:
         action = a.get("action")
         value = a.get("value")
@@ -144,7 +148,11 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                         if reqid != requestid:
                             return
                         speak(summary)
-                        app.after(0, lambda: update_ui(summary) if update_ui else None)
+                        try:
+                            app.after(0, lambda: update_ui(summary))
+                        except:
+                            if update_ui:
+                                update_ui(summary)
                     except Exception:
                         announce(text[:80])
                 threading.Thread(target=summarizescreen, daemon=True).start()
@@ -348,7 +356,7 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
         animate()
         canvas.itemconfigure(textinput_window, state="normal")
         on_done()
-    canvas.after(5000, done)
+    return done
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -459,8 +467,9 @@ def main(canvas, canvas_img):
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
                     exectuteactions(actions, update_ui, result)
+                    app.after(0, stop_animation)
                 threading.Thread(target=run_groq, daemon=True).start()
-            showaigif(canvas, on_done, canvas_img, textinput_window)
+            stop_animation = showaigif(canvas, on_done, canvas_img, textinput_window)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -495,8 +504,9 @@ def main(canvas, canvas_img):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
                     exectuteactions(actions, update_ui, text)
+                    app.after(0, stop_animation)
                 threading.Thread(target=run_groq, daemon=True).start()
-            showaigif(canvas, on_done, canvas_img, textinput_window)
+            stop_animation = showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
@@ -644,5 +654,37 @@ def welcome():
     canvas.tag_bind(continuebtn2, "<Leave>", leave)
     canvas.tag_bind(continuebtn, "<Button-1>", lambda e: fademain(canvas, canvasbg))
     canvas.tag_bind(continuebtn2, "<Button-1>", lambda e: fademain(canvas, canvasbg))
-welcome()
-app.mainloop()
+def wakewordloop():
+    recognizer = sr.Recognizer()
+    samplerate = 16000
+    duration = 2
+    lastrigger = 0
+    cooldown = 3
+    while True:
+        try: 
+            recording = sd.rec(int(duration*samplerate), samplerate=samplerate, channels=1, dtype="int16")
+            sd.wait()
+            audio = sr.AudioData(recording.tobytes(), samplerate, 2)
+            text= recognizer.recognize_google(audio).lower()
+            print("heard:", text)
+            current = time.time()
+            if "nova" in text and current - lastrigger >cooldown:
+                lastrigger = current
+                print("deteced word")
+                speak("Yes?")
+                commandrecording = sd.rec(int(5*samplerate), samplerate=samplerate, channels=1, dtype="int16")
+                sd.wait()
+                commandaudio = sr.AudioData(commandrecording.tobytes(), samplerate, 2)
+                commandtext = recognizer.recognize_google(commandaudio).lower()
+                print("command:", commandtext)
+                parsed = askgroq(commandtext)
+                actions = parsed.get("actions", [])
+                exectuteactions(actions, user_text=commandtext)
+        except sr.UnknownValueError:
+            continue
+        except Exception as e:
+            print("wakeword error:", e)
+if __name__ == "__main__":
+    threading.Thread(target=wakewordloop, daemon=True).start()
+    welcome()
+    app.mainloop()
