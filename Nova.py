@@ -107,6 +107,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
     for a in actions:
         action = a.get("action")
         value = a.get("value")
+        if value:
+            value=value.lower()
         try:
             if action == "set_volume":
                 vol = int(int(value) * 65535/100)
@@ -191,8 +193,12 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if update_ui:
                     update_ui(value)
             elif action =="open_app":
-                subprocess.Popen(["start", value], shell=True)
-                announce(f"Opening {value}")
+                try:
+                    os.startfile(value)
+                    announce(f"Openning {value}")
+                except Exception:
+                    subprocess.Popen(f"start{value}", shell=True)
+                    announce(f"Trying to open{value}")
             elif action == "close_app":
                 subprocess.Popen(["taskkill", "/f", "/im", f"{value}.exe"], shell=True)
                 announce(f"Closing {value}")
@@ -356,7 +362,7 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
         animate()
         canvas.itemconfigure(textinput_window, state="normal")
         on_done()
-    return done
+    return done()
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -467,9 +473,8 @@ def main(canvas, canvas_img):
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
                     exectuteactions(actions, update_ui, result)
-                    app.after(0, stop_animation)
                 threading.Thread(target=run_groq, daemon=True).start()
-            stop_animation = showaigif(canvas, on_done, canvas_img, textinput_window)
+            showaigif(canvas, on_done, canvas_img, textinput_window)
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -488,7 +493,7 @@ def main(canvas, canvas_img):
             canvas.itemconfig(rectext, text="Processing...")
             canvas.itemconfig(rectextshdw, text="Processing...")
     def submittext(e):
-        text = textinput.get().strip()
+        text = textinput.get().strip().lower()
         if text:
             textresult[0] = text
             textinput.delete(0, 'end')
@@ -501,12 +506,12 @@ def main(canvas, canvas_img):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=msg))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=msg))
                     def update_ui(t):
+                        wrapped = "\n".join([t[i:i+35] for i in range(0, len(t), 35)])
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
                     exectuteactions(actions, update_ui, text)
-                    app.after(0, stop_animation)
                 threading.Thread(target=run_groq, daemon=True).start()
-            stop_animation = showaigif(canvas, on_done, canvas_img, textinput_window)
+            showaigif(canvas, on_done, canvas_img, textinput_window)
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
