@@ -7,7 +7,9 @@ import time
 import queue
 import pythoncom
 voiceenabled = [True]
-after_id = None
+wakewordenabled = [True]
+tts_rate = [150]
+after_id =None
 from groq import Groq
 import json 
 import speech_recognition as sr
@@ -88,7 +90,7 @@ def speak(text):
     def run():
         pythoncom.CoInitialize()
         engine = pyttsx3.init()
-        engine.setProperty('rate', 150)
+        engine.setProperty('rate', tts_rate[0])
         engine.setProperty('volume', 1.0)
         engine.say(text)
         engine.runAndWait()
@@ -379,7 +381,7 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
         animate()
         canvas.itemconfigure(textinput_window, state="normal")
         on_done()
-    return done()
+    app.after(500, done)
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -624,6 +626,32 @@ def settings(canvas, canvas_img):
     canvas.itemconfig(voicebtnshdw, state=state)
     canvas.create_text(343, 133, text="Voice Responses", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(340, 130, text="Voice Responses", font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
+    wakecheck = canvas.create_rectangle(148, 172, 168, 192, outline="#319950", width=2, fill="black", stipple="gray12")
+    wakecheckmark = [None, None]
+    def drawwakecheck():
+        if wakecheckmark[0]:
+            canvas.delete(wakecheckmark[0])
+        if wakecheckmark[1]:
+            canvas.delete(wakecheckmark[1])
+
+        if wakewordenabled[0]:
+            wakecheckmark[0] = canvas.create_text(161, 185, text="✓", font=("Arial", 14), fill="#0a2e18")
+            wakecheckmark[1] = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950")
+            canvas.tag_bind(wakecheckmark[0], "<Button-1>", togglewake)
+            canvas.tag_bind(wakecheckmark[1], "<Button-1>", togglewake)
+        else:
+            wakecheckmark[0] = None
+            wakecheckmark[1] = None
+    def togglewake(e):
+        wakewordenabled[0] = not wakewordenabled[0]
+        print("wakewordenabled:", wakewordenabled[0])
+        drawwakecheck()
+    wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
+    wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center')
+    drawwakecheck()
+    canvas.tag_bind(wakecheck, "<Button-1>", togglewake)
+    canvas.tag_bind(wakelabel, "<Button-1>", togglewake)
+    canvas.tag_bind(wakelabelshdw, "<Button-1>", togglewake)
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
         state = "normal" if voiceenabled[0] else "hidden"
@@ -683,6 +711,9 @@ def wakewordloop():
     lastrigger = 0
     cooldown = 3
     while True:
+        if not wakewordenabled[0]:
+            time.sleep(0.2)
+            continue
         try: 
             recording = sd.rec(int(duration*samplerate), samplerate=samplerate, channels=1, dtype="int16")
             sd.wait()
