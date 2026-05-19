@@ -627,31 +627,20 @@ def settings(canvas, canvas_img):
     canvas.create_text(343, 133, text="Voice Responses", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(340, 130, text="Voice Responses", font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
     wakecheck = canvas.create_rectangle(148, 172, 168, 192, outline="#319950", width=2, fill="black", stipple="gray12")
-    wakecheckmark = [None, None]
-    def drawwakecheck():
-        if wakecheckmark[0]:
-            canvas.delete(wakecheckmark[0])
-        if wakecheckmark[1]:
-            canvas.delete(wakecheckmark[1])
-
-        if wakewordenabled[0]:
-            wakecheckmark[0] = canvas.create_text(161, 185, text="✓", font=("Arial", 14), fill="#0a2e18")
-            wakecheckmark[1] = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950")
-            canvas.tag_bind(wakecheckmark[0], "<Button-1>", togglewake)
-            canvas.tag_bind(wakecheckmark[1], "<Button-1>", togglewake)
-        else:
-            wakecheckmark[0] = None
-            wakecheckmark[1] = None
+    wakebtnshdw = canvas.create_text(161, 185, text="✓", font=("Arial", 14), fill="#0a2e18")
+    wakebtn = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950")
+    canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
+    canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center')
+    def refreshwake():
+        wakestate = 'normal' if wakewordenabled[0] else 'hidden'
+        canvas.itemconfig(wakebtn, state=wakestate)
+        canvas.itemconfig(wakebtnshdw, state=wakestate)
     def togglewake(e):
         wakewordenabled[0] = not wakewordenabled[0]
-        print("wakewordenabled:", wakewordenabled[0])
-        drawwakecheck()
-    wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
-    wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center')
-    drawwakecheck()
+        refreshwake()
     canvas.tag_bind(wakecheck, "<Button-1>", togglewake)
-    canvas.tag_bind(wakelabel, "<Button-1>", togglewake)
-    canvas.tag_bind(wakelabelshdw, "<Button-1>", togglewake)
+    canvas.tag_bind(wakebtn, "<Button-1>",togglebutton)
+    canvas.tag_bind(wakebtnshdw, "<Button-1>", togglewake)
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
         state = "normal" if voiceenabled[0] else "hidden"
