@@ -660,8 +660,8 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
     canvas.create_text(343, 233, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(340, 230, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
-    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("PressStart2P", 16), fill="#0a2e18", width = 90)
-    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('PressStart2P', 16), fill="#319950", width=90)
+    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
+    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
     minussshdw = canvas.create_text(263, 273, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
     minusbtn = canvas.create_text(260, 270, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
     plusshdw = canvas.create_text(443, 273, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
@@ -681,11 +681,30 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(minussshdw, "<Button-1>", slowspeech)
     canvas.tag_bind(plusbtn, "<Button-1>", fastspeech)
     canvas.tag_bind(plusshdw, "<Button-1>", fastspeech)
+    def testvoice(e):
+        speak("Say something")
+        def run():
+            time.sleep(1.2)
+            samplerate = 16000
+            duration = 4
+            try:
+                recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype="int16")
+                sd.wait()
+                r = sr.Recognizer()
+                audio = sr.AudioData(recording.tobytes(), samplerate, 2)
+                text = r.recognize_google(audio)
+                speak(f"You said {text}")
+            except sr.UnknownValueError:
+                speak("I did not hear anything")
+            except Exception as e:
+                print("test voice error:", e)
+                speak("Voice test failed")
+        threading.Thread(target=run, daemon=True).start()
     rounded_rect(canvas, 245, 320, 455, 360, r=9, color="#319950", width=3)
     testshdw = canvas.create_text(353, 345, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
     testbtn = canvas.create_text(350, 342, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
-    canvas.tag_bind(testshdw, "<Button-1>", lambda e: speak("Nova voice test"))
-    canvas.tag_bind(testbtn, "<Button-1>", lambda e : speak("Nova voice test"))
+    canvas.tag_bind(testshdw, "<Button-1>",testvoice)
+    canvas.tag_bind(testbtn, "<Button-1>",  testvoice)
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
         savesettings()
