@@ -1,5 +1,5 @@
 {
     "voiceenabled": true,
     "wakewordenabled": true,
-    "tts_rate": 80
+    "tts_rate": 100
 }

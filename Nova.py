@@ -8,7 +8,7 @@ import queue
 import pythoncom
 voiceenabled = [True]
 wakewordenabled = [True]
-tts_rate = [150]
+tts_rate = [50]
 after_id =None
 from groq import Groq
 import json 
@@ -83,7 +83,7 @@ def loadsettings():
             data = json.load(f)
         voiceenabled[0] = data.get("voiceenabled", True)
         wakewordenabled[0] = data.get("wakewordenabled", True)
-        tts_rate[0] = data.get("tts_rate", 150)
+        tts_rate[0] = max(1, min(100, int(data.get("tts_rate", 50))))
     except:
         savesettings()
 loadsettings()
@@ -105,7 +105,7 @@ def speak(text):
     def run():
         pythoncom.CoInitialize()
         engine = pyttsx3.init()
-        engine.setProperty('rate', tts_rate[0])
+        engine.setProperty('rate', 75 + int(tts_rate[0] * 2))
         engine.setProperty('volume', 1.0)
         engine.say(text)
         engine.runAndWait()
@@ -660,28 +660,32 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
     canvas.create_text(343, 233, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(340, 230, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
-    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("PressStart2P", 24), fill="#0a2e18")
-    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('PressStart2P', 24), fill="#319950")
+    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("PressStart2P", 16), fill="#0a2e18", width = 90)
+    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('PressStart2P', 16), fill="#319950", width=90)
     minussshdw = canvas.create_text(263, 273, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
     minusbtn = canvas.create_text(260, 270, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
     plusshdw = canvas.create_text(443, 273, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
     plusbtn = canvas.create_text(440, 270, text="+", font=("Necosmic Personal Use", 24), fill="#319950")
-    def updatedspeedtext():
+    def updatespeedtext():
         canvas.itemconfig(speedtext, text=str(tts_rate[0]))
         canvas.itemconfig(speedshdw, text=str(tts_rate[0]))
     def slowspeech(e):
-        tts_rate[0] = max(80, tts_rate[0] - 10)
+        tts_rate[0] = max(1, tts_rate[0] - 5)
         savesettings()
-        updatedspeedtext()
+        updatespeedtext()
     def fastspeech(e):
-        tts_rate[0] = min(250, tts_rate[0]-10)
+        tts_rate[0] = min(100, tts_rate[0] + 5)
         savesettings()
-        updatedspeedtext()
+        updatespeedtext()
     canvas.tag_bind(minusbtn, "<Button-1>", slowspeech)
     canvas.tag_bind(minussshdw, "<Button-1>", slowspeech)
     canvas.tag_bind(plusbtn, "<Button-1>", fastspeech)
     canvas.tag_bind(plusshdw, "<Button-1>", fastspeech)
     rounded_rect(canvas, 245, 320, 455, 360, r=9, color="#319950", width=3)
+    testshdw = canvas.create_text(353, 345, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    testbtn = canvas.create_text(350, 342, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
+    canvas.tag_bind(testshdw, "<Button-1>", lambda e: speak("Nova voice test"))
+    canvas.tag_bind(testbtn, "<Button-1>", lambda e : speak("Nova voice test"))
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
         savesettings()
