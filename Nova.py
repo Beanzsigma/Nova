@@ -72,6 +72,21 @@ no explanations, or thing like that. exeption for questions about screen like so
 If OCR text is missing or incomplete, infer from context instead of saying unclear.
 ALSO, when using open_app, make sure the start of the app name is capitalized and everything. 
 """
+SETTINGSFILE = "nova_settings.json"
+def savesettings():
+    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0]}
+    with open(SETTINGSFILE, "w") as f:
+        json.dump(data, f, indent=4)
+def loadsettings():
+    try:
+        with open(SETTINGSFILE, "r") as f:
+            data = json.load(f)
+        voiceenabled[0] = data.get("voiceenabled", True)
+        wakewordenabled[0] = data.get("wakewordenabled", True)
+        tts_rate[0] = data.get("tts_rate", 150)
+    except:
+        savesettings()
+loadsettings()
 def askgroq(user_text):
     try: 
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=350)
@@ -630,20 +645,22 @@ def settings(canvas, canvas_img):
     wakecheck = canvas.create_rectangle(148, 172, 168, 192, outline="#319950", width=2, fill="black", stipple="gray12", tags=wake_items)
     wakebtnshdw = canvas.create_text(161, 185, text="✓", font=("Arial", 14), fill="#0a2e18", tags=wake_items)
     wakebtn = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950", tags=wake_items)
-    wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
-    wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center')
+    wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center', tags=wake_items)
+    wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center', tags=wake_items)
     def refreshwake():
         wakestate = "normal" if wakewordenabled[0] else "hidden"
         canvas.itemconfig(wakebtn, state=wakestate)
         canvas.itemconfig(wakebtnshdw, state=wakestate)
     def togglewake(e):
         wakewordenabled[0] = not wakewordenabled[0]
+        savesettings
         print("wakewordenabled:", wakewordenabled[0])
         refreshwake()
     refreshwake()
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
+        savesettings()
         state = "normal" if voiceenabled[0] else "hidden"
         canvas.itemconfig(voicebtn, state=state)
         canvas.itemconfig(voicebtnshdw, state=state)

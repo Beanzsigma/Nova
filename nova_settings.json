@@ -1,1 +1,5 @@
-{"voiceenabled": false, "wakewordenabled": false, "tts_rate": 150}
+{
+    "voiceenabled": true,
+    "wakewordenabled": true,
+    "tts_rate": 150
+}
