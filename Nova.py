@@ -51,6 +51,11 @@ Available actions:
 -speak_response (value: the response to say out loud, for questions and answers that don't need typing)
 - unknown
 -read_screen
+- move_mouse (value: {"x": number, "y": number, "duration": optional seconds})
+- move_mouse_relative (value: {"x": number, "y": number, "duration": optional seconds})
+- click_mouse (value: "left", "right", "middle", or optional)
+- double_click_mouse
+- scroll_mouse (value: positive scrolls up, negative scrolls down)
 You can chain multiple actions for complex tasks.
 Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "close_app", "value": "discord"}, {"action": "open_app", "value": "spotify"}]}
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
@@ -59,6 +64,13 @@ Example: "what is the capital of France" → {"actions": [{"action": "speak_resp
 If the user asks a question, always use speak_response, never type_text
 If the user says"write", "type", "draft", "compose" etc... use type_text
 If it is a system command, use the correct action
+For mouse movement:
+- "move mouse to 500 300" do {"actions": [{"action": "move_mouse", "value": {"x": 500, "y": 300}}]}
+- "move mouse right 100" do {"actions": [{"action": "move_mouse_relative", "value": {"x": 100, "y": 0}}]}
+- "move mouse left 100" do {"actions": [{"action": "move_mouse_relative", "value": {"x": -100, "y": 0}}]}
+-  "click" do {"actions": [{"action": "click_mouse", "value": "left"}]}
+- "right_click" do {"actions": [{"action": "click_mouse", "value": "right"}]}
+- "scroll down" do {"actions": [{"action": "scroll_mouse", "value": -5}]}
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
 you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
@@ -132,6 +144,11 @@ def open_app(value, announce):
     except Exception as e:
         print(f"open_app error for {app_name}: {e}")
         announce(f"Could not open {app_name}")
+def clamp_mouse_position(x, y):
+    screen_w, screen_h = pyautogui.size()
+    x = max(0, min(int(x), screen_w - 1))
+    y= max(0, min(int(y), screen_h-1))
+    return x, y
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
@@ -231,6 +248,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 speak(value)
                 if update_ui:
                     update_ui(value)
+            elif action == "move_mouse"
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":
