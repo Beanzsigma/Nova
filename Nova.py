@@ -161,6 +161,39 @@ def findscreentarget(target_description):
     max_side = 1280
     scale = min(1.0, max_side / max(original_w, original_h))
     sent_img = ss
+    if scale < 1.0:
+        sent_w = int(original_w *scale)
+        sent_h = int(original_h*scale)
+        sent_img = ss.resize((sent_w, sent_h), Image.LANCZ0S)
+    else:
+        sent_w, sent_h = original_w, original_h
+    buffer = BytesIO()
+    sent_img.save(buffer, format="JPEG", quality=70)
+    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    prompt = f"""
+    You are controlling a Windows computer from a screenshot.
+Find the center point of this target:
+{target_description}
+Return ONLY JSON:
+{{"found": true, "x": 123, "y": 456, "confidence": 0.0-1.0}}
+
+Rules:
+- x and y must be pixel coordinates in the provided screenshot.
+- The screenshot size is {sent_w}x{sent_h}.
+- Use the center of the target.
+- If not visible, return {{"found": false, "x": 0, "y": 0, "confidence": 0}}
+"""
+    response = client.chat.completions.create(model=COMMAND_MODEL, messages=[
+            { "role": "user", "content": [     {"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},},],}],response_format={"type": "json_object"},max_completion_tokens=350,)
+    raw = response.choices[0].message.content.strip()
+    data = json.loads(raw)
+    if not data.get("found"):
+        return None
+    x = int(data.get("x", 0))
+    y = int(data.get("y", 0))
+    real_x = int(x/scale)
+    real_y = int(y/scale)
+    return clamp_mouse_position(real_x, real_y)
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
