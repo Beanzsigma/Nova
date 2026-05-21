@@ -260,16 +260,19 @@ def clear(canvas, canvas_img):
         if item != canvas_img:
             canvas.delete(item)
 def rounded_rect(canvas, x1, y1, x2, y2, r=20, color="#0F4423", width=2):
+    items = []
     arc_kwargs = {"outline": color, "width": width}
     line_kwargs = {"fill": color, "width": width}
-    canvas.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=90, style="arc", **arc_kwargs)
-    canvas.create_arc(x2-2*r, y1, x2, y1+2*r, start=0, extent=90, style="arc", **arc_kwargs)
-    canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90, style="arc", **arc_kwargs)          
-    canvas.create_arc(x2-2*r, y2-2*r, x2, y2, start=270, extent=90, style="arc", **arc_kwargs)
-    canvas.create_line(x1+r, y1, x2-r, y1, **line_kwargs)
-    canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs)
-    canvas.create_line(x1, y1+r, x1, y2-r, **line_kwargs)
-    canvas.create_line(x2, y1+r, x2, y2-r, **line_kwargs)
+
+    items.append(canvas.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=90, style="arc", **arc_kwargs))
+    items.append(canvas.create_arc(x2-2*r, y1, x2, y1+2*r, start=0, extent=90, style="arc", **arc_kwargs))
+    items.append(canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90, style="arc", **arc_kwargs))
+    items.append(canvas.create_arc(x2-2*r, y2-2*r, x2, y2, start=270, extent=90, style="arc", **arc_kwargs))
+    items.append(canvas.create_line(x1+r, y1, x2-r, y1, **line_kwargs))
+    items.append(canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs))
+    items.append(canvas.create_line(x1, y1+r, x1, y2-r, **line_kwargs))
+    items.append(canvas.create_line(x2, y1+r, x2, y2-r, **line_kwargs))
+    return items
 voiceque = queue.Queue()
 recordingactive  = [False]
 def listenvoice(q):
@@ -658,14 +661,14 @@ def settings(canvas, canvas_img):
         refreshwake()
     refreshwake()
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
-    canvas.create_text(343, 233, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
-    canvas.create_text(340, 230, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
-    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
-    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
-    minussshdw = canvas.create_text(263, 273, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
-    minusbtn = canvas.create_text(260, 270, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
-    plusshdw = canvas.create_text(443, 273, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
-    plusbtn = canvas.create_text(440, 270, text="+", font=("Necosmic Personal Use", 24), fill="#319950")
+    canvas.create_text(353, 233, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
+    canvas.create_text(350, 230, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
+    speedshdw = canvas.create_text(353, 298, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
+    speedtext = canvas.create_text(350, 295, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
+    minussshdw = canvas.create_text(263, 298, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
+    minusbtn = canvas.create_text(260, 295, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
+    plusshdw = canvas.create_text(443, 298, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
+    plusbtn = canvas.create_text(440, 295, text="+", font=("Necosmic Personal Use", 24), fill="#319950")
     def updatespeedtext():
         canvas.itemconfig(speedtext, text=str(tts_rate[0]))
         canvas.itemconfig(speedshdw, text=str(tts_rate[0]))
@@ -677,10 +680,30 @@ def settings(canvas, canvas_img):
         tts_rate[0] = min(100, tts_rate[0] + 5)
         savesettings()
         updatespeedtext()
+    def minusenter(e):
+        canvas.itemconfig(minusbtn, fill="#0F4423")
+        canvas.itemconfig(minussshdw, fill="#0E0D0D")
+    def minusleave(e):
+        canvas.itemconfig(minussshdw, fill="#0a2e18")
+        canvas.itemconfig(minusbtn, fill="#319950")
+    def plusenter(e):
+        canvas.itemconfig(plusbtn, fill="#0F4423")
+        canvas.itemconfig(plusshdw, fill="#0E0D0D")
+    def plusleave(e):
+        canvas.itemconfig(plusbtn, fill="#319950")
+        canvas.itemconfig(plusshdw, fill="#0E0D0D")
     canvas.tag_bind(minusbtn, "<Button-1>", slowspeech)
     canvas.tag_bind(minussshdw, "<Button-1>", slowspeech)
     canvas.tag_bind(plusbtn, "<Button-1>", fastspeech)
     canvas.tag_bind(plusshdw, "<Button-1>", fastspeech)
+    canvas.tag_bind(minusbtn, "<Enter>", minusenter)
+    canvas.tag_bind(minussshdw, "<Enter>", minusenter)
+    canvas.tag_bind(minusbtn, "<Leave>", minusleave)
+    canvas.tag_bind(minussshdw, "<Leave>", minusleave)
+    canvas.tag_bind(plusbtn, "<Leave>", plusleave)
+    canvas.tag_bind(plusshdw, "<Leave>", plusleave)
+    canvas.tag_bind(plusbtn, "<Enter>", plusenter)
+    canvas.tag_bind(plusshdw, "<Enter>", plusenter)
     def testvoice(e):
         speak("Say something")
         def run():
@@ -709,11 +732,30 @@ def settings(canvas, canvas_img):
                 print("test voice error:", e)
                 speak("Voice test failed")
         threading.Thread(target=run, daemon=True).start()
-    rounded_rect(canvas, 245, 320, 455, 360, r=9, color="#319950", width=3)
-    testshdw = canvas.create_text(353, 345, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
-    testbtn = canvas.create_text(350, 342, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
+    testrec = rounded_rect(canvas, 245, 350, 455, 390, r=9, color="#319950", width=3)
+    testshdw = canvas.create_text(353, 375, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    testbtn = canvas.create_text(350, 372, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
+    def recolortest(items, color):
+        for item in items:
+            kind = canvas.type(item)
+            if kind == "arc":
+                canvas.itemconfig(item, outline=color)
+            elif kind == "line":
+                canvas.itemconfig(item, fill=color)
+    def entertest(e):
+        canvas.itemconfig(testbtn, fill="#0F4423")
+        canvas.itemconfig(testshdw, fill="#0E0D0D")
+        recolortest(testrec, "#0a2e18")
+    def leavetest(e):
+        canvas.itemconfig(testbtn, fill="#319950")
+        canvas.itemconfig(testshdw, fill="#0a2e18")
+        recolortest(testrec, "#319950")
     canvas.tag_bind(testshdw, "<Button-1>",testvoice)
     canvas.tag_bind(testbtn, "<Button-1>",  testvoice)
+    canvas.tag_bind(testbtn,"<Leave>", leavetest )
+    canvas.tag_bind(testshdw, "<Leave>", leavetest)
+    canvas.tag_bind(testbtn, "<Enter>", entertest)
+    canvas.tag_bind(testshdw, "<Enter>", entertest)
     def togglebutton(e):
         voiceenabled[0] = not voiceenabled[0]
         savesettings()
