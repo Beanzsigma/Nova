@@ -248,7 +248,40 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 speak(value)
                 if update_ui:
                     update_ui(value)
-            elif action == "move_mouse"
+            elif action == "move_mouse":
+                if isinstance(value, dict):
+                    x= value.get("x", 0)
+                    y= value.get("y", 0)
+                    duration = float(value.get('duration', 0.25))
+                else:
+                    parts = str(value).replace(",", "").split()
+                    x = int(parts[0])
+                    y =int(parts[1])
+                    duration = 0.25
+                x, y= clamp_mouse_position(x, y)
+                pyautogui.moveTo(x, y, duration=duration)
+            elif action =="move_mouse_relative":
+                if isinstance(value, dict):
+                    x= int(value.get("x", 0))
+                    y = int(value.get("y", 0))
+                    duration = float(value.get("duration", 0.25))
+                else:
+                    parts = str(value).replace(",", "").split()
+                    x = int(parts[0])
+                    y= int(parts[1])
+                    duration = 0.25
+                current_x, current_y = pyautogui.position()
+                target_x, target_y = clamp_mouse_position(current_x + x, current_y +y)
+                pyautogui.moveTo(target_x, target_y, duration=duration)
+            elif action =="click_mouse":
+                button = str(value or "left").lower()
+                if button not in ["left", "right", "middle"]:
+                    button = 'left'
+                pyautogui.click(button=button)
+            elif action == "double_click_mouse":
+                pyautogui.doubleClick()
+            elif action == 'scroll_mouse':
+                pyautogui.scroll(int(value))
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":
