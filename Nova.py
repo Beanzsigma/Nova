@@ -99,6 +99,12 @@ If user asks QUESTION ABOUT SCREEN → normal answer allowed
 no explanations, or thing like that. exeption for questions about screen like solving a problem
 If OCR text is missing or incomplete, infer from context instead of saying unclear.
 ALSO, when using open_app, make sure the start of the app name is capitalized and everything. 
+Another thing, u can do multiple commands, for example the user asks to go to google, use the mouse to go to settings, press it, and scroll down to whatever. 
+Additionally, when pressing thing like moving ur mouse to a specific point, make sure it is accurate, and exact.
+- Be pixel accurate.
+- Prefer exact icon/logo center.
+- Do NOT estimate.
+- If partially visible return found:false.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -187,7 +193,7 @@ def findscreentarget(target_description):
     else:
         sent_w, sent_h = original_w, original_h
     buffer = BytesIO()
-    sent_img.save(buffer, format="JPEG", quality=70)
+    sent_img.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
     prompt = f"""
     You are controlling a Windows computer from a screenshot.
