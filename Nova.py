@@ -34,8 +34,8 @@ load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
 client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
-COMMAND_MODEL = "openai/gpt-5.5-pro"
-VISION_MODEL = "openai/gpt-5.5-pro"
+COMMAND_MODEL = "google/gemini-2.5-flash"
+VISION_MODEL = "google/gemini-2.5-flash"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
 The user will give you a natural language command.
 Respond ONLY with a JSON object, no explanation, no markdown, nothing else.
@@ -62,6 +62,10 @@ Available actions:
 - click_mouse (value: "left", "right", "middle", or optional)
 - double_click_mouse
 - scroll_mouse (value: positive scrolls up, negative scrolls down)
+- screen_move (value: description of thing on screen)
+- screen_click (value: description of thing on screen)
+- screen_double_click (value: description of thing on screen)
+- screen_right_click (value: description of thing on screen)
 You can chain multiple actions for complex tasks.
 Example: "focus mode" → {"actions": [{"action": "mute_volume"}, {"action": "close_app", "value": "discord"}, {"action": "open_app", "value": "spotify"}]}
 Example: "screenshot and open chrome" → {"actions": [{"action": "screenshot"}, {"action": "open_app", "value": "chrome"}]}
@@ -77,6 +81,12 @@ For mouse movement:
 -  "click" do {"actions": [{"action": "click_mouse", "value": "left"}]}
 - "right_click" do {"actions": [{"action": "click_mouse", "value": "right"}]}
 - "scroll down" do {"actions": [{"action": "scroll_mouse", "value": -5}]}
+For screen vision:
+- "click the search bar" do {"actions": [{"action": "screen_click", "value": "search bar"}]}
+- "move to the blue button" do {"actions": [{"action": "screen_move", "value": "blue button"}]}
+- "double click the Chrome icon" do {"actions": [{"action": "screen_double_click", "value": "Chrome icon"}]}
+- "right click the file named Nova.py" do {"actions": [{"action": "screen_right_click", "value": "file named Nova.py"}]}
+If the user describes something visible on screen and wants mouse interaction, use screen actions, not coordinate actions.
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
 you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
@@ -106,16 +116,25 @@ def loadsettings():
         savesettings()
 loadsettings()
 def askgroq(user_text):
-    try: 
-        response = client.chat.completions.create(model = COMMAND_MODEL, messages=[{"role": "system", "content": SYSTEM_PROMPT},{"role": "user", "content": user_text}], max_tokens=350)
+    try:
+        response = client.chat.completions.create(
+            model=COMMAND_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_text}
+            ],
+            max_tokens=350
+        )
+
         raw = response.choices[0].message.content.strip()
         raw = raw.replace("```json", "").replace("```", "").strip()
         print(f"AI: {raw}")
+
         parsed = json.loads(raw)
         return parsed
     except Exception as e:
-        print(f"Groq sold bruuu: {e}")
-        return {"actions": [{"action": 'unknown'}]}
+        print(f"AI error: {e}")
+        return {"actions": [{"action": "unknown"}]}
 import pyttsx3
 def speak(text):
     if not voiceenabled[0]:
@@ -164,7 +183,7 @@ def findscreentarget(target_description):
     if scale < 1.0:
         sent_w = int(original_w *scale)
         sent_h = int(original_h*scale)
-        sent_img = ss.resize((sent_w, sent_h), Image.LANCZ0S)
+        sent_img = ss.resize((sent_w, sent_h), Image.LANCZOS)
     else:
         sent_w, sent_h = original_w, original_h
     buffer = BytesIO()
@@ -183,8 +202,9 @@ Rules:
 - Use the center of the target.
 - If not visible, return {{"found": false, "x": 0, "y": 0, "confidence": 0}}
 """
-    response = client.chat.completions.create(model=COMMAND_MODEL, messages=[
-            { "role": "user", "content": [     {"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},},],}],response_format={"type": "json_object"},max_completion_tokens=350,)
+    response = client.chat.completions.create(
+    model=VISION_MODEL,
+    messages=[ {"role": "user",    "content": [  {"type": "text", "text": prompt},  {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}, ], }],response_format={"type": "json_object"},max_tokens=350,)
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
     if not data.get("found"):
@@ -245,7 +265,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     text= "No readable text found on screen"
                 def summarizescreen(reqid=requestid):
                     try:
-                        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
+                        response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
                         }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=80)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
@@ -293,6 +313,37 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 speak(value)
                 if update_ui:
                     update_ui(value)
+            elif action == "screen_move":
+                coords = findscreentarget(value)
+                if not coords:
+                    announce("I cannot find it")
+                    continue
+                x, y = coords
+                pyautogui.moveTo(x, y, duration=0.3)
+            elif action == "screen_click":
+                coords = findscreentarget(value)
+                if not coords:
+                    announce("I cannot find it")
+                    continue
+                x, y = coords
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.click()
+            elif action == "screen_double_click":
+                coords = findscreentarget(value)
+                if not coords:
+                    announce("I cannot find it")
+                    continue
+                x, y = coords
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.doubleClick()
+            elif action == "screen_right_click":
+                coords = findscreentarget(value)
+                if not coords:
+                    announce("I cannot find it")
+                    continue
+                x, y = coords
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.click(button='right')
             elif action == "move_mouse":
                 if isinstance(value, dict):
                     x= value.get("x", 0)
@@ -504,7 +555,7 @@ def main(canvas, canvas_img):
     fullanswerready = [False]
     def getfullanswer(result):
         def run():
-            response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
+            response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
                                                        {"role": "user", "content": result} ], max_tokens=350)
             full = response.choices[0].message.content.strip()
             speak(full)
@@ -560,7 +611,7 @@ def main(canvas, canvas_img):
         result = voiceresult[0]
         def on_done():
             def run():
-                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
+                response = client.chat.completions.create(model=COMMAND_MODEL, messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
                                                                                                      {'role': "user", 'content': result}], max_tokens=350) 
                 full = response.choices[0].message.content.strip()
                 speak(full)
@@ -572,7 +623,7 @@ def main(canvas, canvas_img):
         result = textresult[0]
         def on_done():
             def run():
-                response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
+                response = client.chat.completions.create(model=COMMAND_MODEL, messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
                                                                                                      {'role': "user", 'content': result}], max_tokens=350) 
                 full = response.choices[0].message.content.strip()
                 speak(full)
