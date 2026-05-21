@@ -684,14 +684,23 @@ def settings(canvas, canvas_img):
     def testvoice(e):
         speak("Say something")
         def run():
-            time.sleep(1.2)
+            time.sleep(2)
             samplerate = 16000
-            duration = 4
+            chunks = []
+            test_active = [True]
+            def callback(indata, frames, timestamp, status):
+                if test_active[0]:
+                    chunks.append(indata.copy())
             try:
-                recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype="int16")
-                sd.wait()
+                with sd.InputStream(samplerate=samplerate, channels=1, dtype="int16", callback=callback):
+                    time.sleep(4)
+                test_active[0] = False
+                if not chunks:
+                    speak("I did not hear anything")
+                    return
+                audiodata = np.concatenate(chunks, axis=0)
                 r = sr.Recognizer()
-                audio = sr.AudioData(recording.tobytes(), samplerate, 2)
+                audio = sr.AudioData(audiodata.tobytes(), samplerate, 2)
                 text = r.recognize_google(audio)
                 speak(f"You said {text}")
             except sr.UnknownValueError:
