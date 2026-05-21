@@ -4,13 +4,17 @@ import numpy as np
 import threading 
 import pytesseract
 import time
+import base64
+from io import BytesIO
 import queue
 import pythoncom
 voiceenabled = [True]
 wakewordenabled = [True]
 tts_rate = [50]
 after_id =None
-from groq import Groq
+from openai import OpenAI
+import base64
+from io import BytesIO
 import json 
 import speech_recognition as sr
 import subprocess
@@ -28,8 +32,10 @@ import sys
 from dotenv import load_dotenv
 load_dotenv()
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-GROQkey = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQkey)
+AIkey = os.environ.get("HACKCLUB_AI_KEY")
+client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
+COMMAND_MODEL = "openai/gpt-5.5-pro"
+VISION_MODEL = "openai/gpt-5.5-pro"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
 The user will give you a natural language command.
 Respond ONLY with a JSON object, no explanation, no markdown, nothing else.
@@ -101,10 +107,10 @@ def loadsettings():
 loadsettings()
 def askgroq(user_text):
     try: 
-        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": SYSTEM_PROMPT}, {'role': "user", "content": user_text}], max_tokens=350)
+        response = client.chat.completions.create(model = COMMAND_MODEL, messages=[{"role": "system", "content": SYSTEM_PROMPT},{"role": "user", "content": user_text}], max_tokens=350)
         raw = response.choices[0].message.content.strip()
-        raw=raw.replace("```json","").replace("```", "").strip()
-        print(f"Groq: {raw}")
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        print(f"AI: {raw}")
         parsed = json.loads(raw)
         return parsed
     except Exception as e:
@@ -149,6 +155,12 @@ def clamp_mouse_position(x, y):
     x = max(0, min(int(x), screen_w - 1))
     y= max(0, min(int(y), screen_h-1))
     return x, y
+def findscreentarget(target_description):
+    ss = pyautogui.screenshot()
+    original_w, original_h = ss.size
+    max_side = 1280
+    scale = min(1.0, max_side / max(original_w, original_h))
+    sent_img = ss
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
