@@ -180,46 +180,48 @@ def clamp_mouse_position(x, y):
     x = max(0, min(int(x), screen_w - 1))
     y= max(0, min(int(y), screen_h-1))
     return x, y
+def get_dpi_scale():
+    try:
+        from ctypes import windll
+        dc = windll.user32.GetDC(0)
+        dpi = windll.gdi32.GetDeviceCaps(dc, 88)
+        windll.user32.ReleaseDC(0, dc)
+        return dpi/ 96.0
+    except:
+        return 1.0
 def findscreentarget(target_description):
-    ss = pyautogui.screenshot()
+    ss= pyautogui.screenshot()
     original_w, original_h = ss.size
-    max_side = 1280
-    scale = min(1.0, max_side / max(original_w, original_h))
-    sent_img = ss
-    if scale < 1.0:
-        sent_w = int(original_w *scale)
-        sent_h = int(original_h*scale)
-        sent_img = ss.resize((sent_w, sent_h), Image.LANCZOS)
-    else:
-        sent_w, sent_h = original_w, original_h
     buffer = BytesIO()
-    sent_img.save(buffer, format="PNG")
+    ss.save(buffer, format="JPEG", quality=95)
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    prompt = f"""
-    You are controlling a Windows computer from a screenshot.
-Find the center point of this target:
-{target_description}
-Return ONLY JSON:
-{{"found": true, "x": 123, "y": 456, "confidence": 0.0-1.0}}
+    prompt = f"""You are controlling a Windows computer.
+Find the center pixel coordinates of: {target_description}
 
-Rules:
-- x and y must be pixel coordinates in the provided screenshot.
-- The screenshot size is {sent_w}x{sent_h}.
-- Use the center of the target.
-- If not visible, return {{"found": false, "x": 0, "y": 0, "confidence": 0}}
-"""
+The screenshot is {original_w}x{original_h} pixels.
+Return ONLY this JSON: {{"found": true, "x": 123, "y": 456}}
+- x and y are pixel coordinates in THIS screenshot
+- Use the exact center of the element
+- If not found: {{"found": false, "x": 0, "y": 0}}"""
+
     response = client.chat.completions.create(
-    model=VISION_MODEL,
-    messages=[ {"role": "user",    "content": [  {"type": "text", "text": prompt},  {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}, ], }],response_format={"type": "json_object"},max_tokens=350,)
+        model=VISION_MODEL,
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+        ]}],
+        response_format={"type": "json_object"},
+        max_tokens=100
+    )
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
+    print(f"Vision result is {data}")
     if not data.get("found"):
         return None
-    x = int(data.get("x", 0))
-    y = int(data.get("y", 0))
-    real_x = int(x/scale)
-    real_y = int(y/scale)
-    return clamp_mouse_position(real_x, real_y)
+    x = int(data["x"])
+    y = int(data["y"])
+    print(f"Clicking t: {x}, {y}")
+    return clamp_mouse_position(x, y)
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
@@ -278,11 +280,12 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                             return
                         speak(summary)
                         try:
-                            app.after(0, lambda: update_ui(summary))
+                            app.after(0, lambda: update_ui(summary) if update_ui else None)
                         except:
                             if update_ui:
                                 update_ui(summary)
-                    except Exception:
+                    except Exception as e:
+                        print(f"summarizescreen error: {e}")
                         announce(text[:80])
                 threading.Thread(target=summarizescreen, daemon=True).start()
                 # import re
