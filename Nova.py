@@ -125,13 +125,7 @@ def askgroq(user_text):
     try:
         response = client.chat.completions.create(
             model=COMMAND_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_text}
-            ],
-            max_tokens=350
-        )
-
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}    ],max_tokens=350)
         raw = response.choices[0].message.content.strip()
         raw = raw.replace("```json", "").replace("```", "").strip()
         print(f"AI: {raw}")
@@ -189,21 +183,33 @@ def get_dpi_scale():
         return dpi/ 96.0
     except:
         return 1.0
+def get_primary_monitor_bounds():
+    """Get the bounds of the primary monitor using Windows API"""
+    try:
+        from ctypes import windll
+        # Get primary monitor screen dimensions
+        hdc = windll.user32.GetDC(0)
+        screen_w = windll.gdi32.GetDeviceCaps(hdc, 8)  # HORZRES
+        screen_h = windll.gdi32.GetDeviceCaps(hdc, 10)  # VERTRES
+        windll.user32.ReleaseDC(0, hdc)
+        return 0, 0, screen_w, screen_h
+    except:
+        w, h = pyautogui.size()
+        return 0, 0, w, h
 def findscreentarget(target_description):
-    ss= pyautogui.screenshot()
+    _, _, mon_w, mon_h = get_primary_monitor_bounds()
+    ss = pyautogui.screenshot(region=(0, 0, mon_w, mon_h))
     original_w, original_h = ss.size
+    print(f"Captured primary monitor: {original_w}x{original_h}")
     buffer = BytesIO()
     ss.save(buffer, format="JPEG", quality=95)
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    prompt = f"""You are controlling a Windows computer.
-Find the center pixel coordinates of: {target_description}
-
-The screenshot is {original_w}x{original_h} pixels.
-Return ONLY this JSON: {{"found": true, "x": 123, "y": 456}}
-- x and y are pixel coordinates in THIS screenshot
-- Use the exact center of the element
-- If not found: {{"found": false, "x": 0, "y": 0}}"""
-
+    prompt = f"""Find the pixel center of: {target_description}
+Screenshot: {original_w}x{original_h} pixels
+Return ONLY:
+{{"found": true, "x": CENTER_X, "y": CENTER_Y}}
+X range: 0-{original_w}, Y range: 0-{original_h}
+Be pixel-perfect accurate. Also, make sure to move exactly on the thing, like the center of the object, so it doesn't like mis-click on a random area."""
     response = client.chat.completions.create(
         model=VISION_MODEL,
         messages=[{"role": "user", "content": [
@@ -211,17 +217,24 @@ Return ONLY this JSON: {{"found": true, "x": 123, "y": 456}}
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
         ]}],
         response_format={"type": "json_object"},
-        max_tokens=100
+        max_tokens=50
     )
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
-    print(f"Vision result is {data}")
+    print(f"AI result: {data}")
+    
     if not data.get("found"):
         return None
+    
     x = int(data["x"])
     y = int(data["y"])
-    print(f"Clicking t: {x}, {y}")
-    return clamp_mouse_position(x, y)
+    
+    # Clamp to screenshot bounds
+    x = max(0, min(x, original_w - 1))
+    y = max(0, min(y, original_h - 1))
+    
+    print(f"Clicking at: {x}, {y}")
+    return x, y
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
