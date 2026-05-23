@@ -97,12 +97,14 @@ For screen vision:
 If the user describes something visible on screen and wants mouse interaction, use screen actions, not coordinate actions.
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
-you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 10 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
-For any action that has visible effect(open_app, open_url, close_app) , include a speak_response action about that app. Like for youtube.com, you would just say "Opening Youtube" or something like that
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 8 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
+Only use speak_response when the user explicitly asks for spoken output.
+Never describe what the assistant is doing.
+No step-by-step narration allowed.
 Another thing. When announcing the read screen thing, don't say everything on the screen, just say the main things. Like if I ask what the answer to this problem is on my screen, just answer it. If I ask
 what my screen is about, give a brief description.
 WHEN USING read_screen:
-If user asks WHAT IS ON SCREEN → max 10 words
+If user asks WHAT IS ON SCREEN → max 8 words
 If user asks QUESTION ABOUT SCREEN → normal answer allowed
 no explanations, or thing like that. exeption for questions about screen like solving a problem
 If OCR text is missing or incomplete, infer from context instead of saying unclear.
@@ -120,6 +122,8 @@ Only return coordinates if confidence > 0.75.
 When doing multi step tasks, make sure to wait to load and stuff, just take that into account, and make sure to follow user's commands.
 Like if I say "Click the Youtube button and click on a a random yt video," click the yt button, wait a bit, then read the screen, and click on a random youtube video. This is the rough idea for most multi step tasks.
 Sometimes the user's input isn't describing text, like actually get the meaning of what the user's trying to say, and run commands. Like the youtube video thing, dont click the youtube text, but actually understand.
+If the user says "click", "select", "open", or "choose", ALWAYS use screen_click or click_mouse.
+Never respond with screen description or speak_response unless explicitly asked.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -292,7 +296,7 @@ Rules:
 - No estimating
 - If unclear return found:false
 - when the user says click sign in or something, make sure to click the actual button, not some random thing. 
-- CLICK INSDE THE OBJECT WHEN CLICKING THINGS, MAKE SURE OF THAT, NOT ON THE EDGES!!!
+- CLICK INSDE THE OBJECT BUTTON OR WHATEVER, MAKE SURE ITS THE CENTER, BECAUSE IF NOT, IT WON'T PROPERLY WORK. DONT CLICK THE EDGES, ONLY CENTER!!!
 - the user may take shortcuts when saying stuff, so use the info the user gave to do corresponding things. Like if user says click the rsm button, but u can see RSM portal, use the info and click RSM portal. Follow this with other directions.
 - DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
 - DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
@@ -328,7 +332,16 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
+    def clean_announce(text):
+        blocked_phrases = ["click", "then", "next", "after that", "go to", "move your mouse","step", "open the", "now you should", "you can", "finally"]
+        t = text.lower()
+        if any(p in t for p in blocked_phrases):
+            return None  
+        return text
     def announce(text):
+        text = clean_announce(text)
+        if not text:
+            return
         speak(text)
         if update_ui:
             try:
@@ -422,11 +435,21 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 #         announce(text[:60])
                 # threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == "speak_response":
-                if hasreadscreen:
-                    continue
+                CLICK_ACTIONS = {"screen_click","screen_double_click","click_mouse","move_mouse","screen_move"}
+                if action == 'speak_response':
+                    if any(a.get("action") in CLICK_ACTIONS for a in actions):
+                        continue
+                value = value.strip()
+                value = value.replace('Click', "Clicking")
+                value = value.replace("Open", "Opening")
+                value = value.replace("Close", "Closing")
+                value = value.replace("Go to", "Going to")
+                value = value.replace("Launch", "Launching")
                 speak(value)
                 if update_ui:
-                    update_ui(value)
+                    cleaned  = clean_announce(value)
+                    if cleaned:
+                        update_ui(cleaned)
             elif action == "screen_move":
                 coords = findtextscreen(value)
                 if not coords:
