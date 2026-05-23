@@ -6,7 +6,9 @@ import pytesseract
 import time
 import base64
 from io import BytesIO
+from difflib import SequenceMatcher
 import queue
+import time
 import easyocr
 import pythoncom
 voiceenabled = [True]
@@ -61,6 +63,7 @@ Available actions:
 - lock_pc
 -speak_response (value: the response to say out loud, for questions and answers that don't need typing)
 - unknown
+- wait (value: seconds to pause before next action)
 -read_screen
 - move_mouse (value: {"x": number, "y": number, "duration": optional seconds})
 - move_mouse_relative (value: {"x": number, "y": number, "duration": optional seconds})
@@ -114,6 +117,9 @@ Return:
  "y": number
 }
 Only return coordinates if confidence > 0.75.
+When doing multi step tasks, make sure to wait to load and stuff, just take that into account, and make sure to follow user's commands.
+Like if I say "Click the Youtube button and click on a a random yt video," click the yt button, wait a bit, then read the screen, and click on a random youtube video. This is the rough idea for most multi step tasks.
+Sometimes the user's input isn't describing text, like actually get the meaning of what the user's trying to say, and run commands. Like the youtube video thing, dont click the youtube text, but actually understand.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -171,6 +177,30 @@ def findtextscreen(target_text):
         return x, y
     return None
 import pyttsx3
+def find_all_text(target_text):
+    ss = pyautogui.screenshot()
+    img = np.array(ss)
+    results = reader.readtext(img)
+    matches = []
+    for (bbox, text, prob) in results:
+        score = SequenceMatcher(None, target_text.lower(), text.lower()).ratio()
+        if score > 0.6:
+            top_left = bbox[0]
+            bottom_right = bbox[2]
+            x = int((top_left[0] + bottom_right[0]) / 2)
+            y = int((top_left[1] + bottom_right[1]) / 2)
+            matches.append((score, x, y, text))
+    matches.sort(key=lambda x: x[2])
+    return matches
+def parse_index(value):
+    words = value.lower()
+    if 'first' in words or '1st' in words:
+        return 0
+    if "second" in words or "2nd" in words:
+        return 1
+    if "third" in words or "3rd" in words:
+        return 2
+    return 0
 def speak(text):
     if not voiceenabled[0]:
         return
@@ -261,6 +291,9 @@ Rules:
 - Must be exact center
 - No estimating
 - If unclear return found:false
+- when the user says click sign in or something, make sure to click the actual button, not some random thing. 
+- CLICK INSDE THE OBJECT WHEN CLICKING THINGS, MAKE SURE OF THAT, NOT ON THE EDGES!!!
+- the user may take shortcuts when saying stuff, so use the info the user gave to do corresponding things. Like if user says click the rsm button, but u can see RSM portal, use the info and click RSM portal. Follow this with other directions.
 - DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
 - DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
 MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
@@ -301,14 +334,16 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             try:
                 app.after(0, lambda: update_ui(text))
             except:
-                if update_ui:
-                    update_ui(text)
-    for a in actions:
+                update_ui(text)
+    for i, a in enumerate(actions):
         action = a.get("action")
         value = a.get("value")
-        if isinstance(value, str):
-            value = value.strip()
+        print(f"[STEP {i+1}/{len(actions)}] {action} -> {value}")
         try:
+            if isinstance(value, str):
+                value = value.strip()
+            if action in ["open_app", "open_url", "screenshot"]:
+                time.sleep(0.6)
             if action == "set_volume":
                 vol = int(int(value) * 65535/100)
                 subprocess.Popen([getpath("nir/nircmd.exe"), "setsysvolume", str(vol)])
@@ -402,14 +437,19 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 x, y = coords
                 pyautogui.moveTo(x, y, duration=0.3)
             elif action == "screen_click":
-                coords = findtextscreen(value)
-                if not coords:
+                matches = find_all_text(value)
+                if not matches:
                     coords = findscreentarget(value)
-                if not coords:
-                    announce("I cannot find it")
-                    continue
-                x, y = coords
-                pyautogui.moveTo(x, y, duration=0.3)
+                    if not coords:
+                        announce("I cannot find it")
+                        continue
+                    x, y = coords
+                else:
+                    index = parse_index(value)
+                    index = min(index, len(matches)-1)
+                    _, x, y, text = matches[index]
+                    print(f"Selected match #{index}: {text}")
+                pyautogui.moveTo(x, y, duration=0.5)
                 pyautogui.click()
             elif action == "screen_double_click":
                 coords = findtextscreen(value)
@@ -423,6 +463,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 x, y = coords
                 pyautogui.moveTo(x, y, duration=0.3)
                 pyautogui.doubleClick()
+            elif action == 'wait':
+                time.sleep(float(value))
             elif action == "screen_right_click":
                 coords = findtextscreen(value)
                 if not coords:
@@ -456,7 +498,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     y= int(parts[1])
                     duration = 0.25
                 current_x, current_y = pyautogui.position()
-                target_x, target_y = clamp_mouse_position(current_x + x, current_y +y)
+                target_x, target_y = clamp_mouse_position(current_x + x, current_y + y)
                 pyautogui.moveTo(target_x, target_y, duration=duration)
             elif action =="click_mouse":
                 button = str(value or "left").lower()
