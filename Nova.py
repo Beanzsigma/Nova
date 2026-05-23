@@ -7,6 +7,7 @@ import time
 import base64
 from io import BytesIO
 import queue
+import easyocr
 import pythoncom
 voiceenabled = [True]
 wakewordenabled = [True]
@@ -31,12 +32,16 @@ import os
 import sys
 from dotenv import load_dotenv
 load_dotenv()
+import ctypes
+ctypes.windll.shcore.SetProcessDpiAwareness(2)
+reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
 client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
-COMMAND_MODEL = "google/gemini-2.5-flash"
-VISION_MODEL = "google/gemini-2.5-flash"
+COMMAND_MODEL = "openai/gpt-4.1"
+VISION_MODEL = "openai/gpt-4.1"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
+Respond ONLY with a valid JSON object.
 The user will give you a natural language command.
 Respond ONLY with a JSON object, no explanation, no markdown, nothing else.
 Format:
@@ -101,10 +106,14 @@ If OCR text is missing or incomplete, infer from context instead of saying uncle
 ALSO, when using open_app, make sure the start of the app name is capitalized and everything. 
 Another thing, u can do multiple commands, for example the user asks to go to google, use the mouse to go to settings, press it, and scroll down to whatever. 
 Additionally, when pressing thing like moving ur mouse to a specific point, make sure it is accurate, and exact.
-- Be pixel accurate.
-- Prefer exact icon/logo center.
-- Do NOT estimate.
-- If partially visible return found:false.
+Return:
+{
+ "found": true/false,
+ "confidence": 0-1,
+ "x": number,
+ "y": number
+}
+Only return coordinates if confidence > 0.75.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -123,18 +132,44 @@ def loadsettings():
 loadsettings()
 def askgroq(user_text):
     try:
-        response = client.chat.completions.create(
-            model=COMMAND_MODEL,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}    ],max_tokens=350)
+        response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": SYSTEM_PROMPT},{"role": "user", "content": user_text}], response_format=
+                                                  {"type": "json_object"}, max_tokens=450)
         raw = response.choices[0].message.content.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
         print(f"AI: {raw}")
-
         parsed = json.loads(raw)
         return parsed
     except Exception as e:
-        print(f"AI error: {e}")
+        print(f"Ai erurrrrrrrrr: {e}")
         return {"actions": [{"action": "unknown"}]}
+def findtextscreen(target_text):
+    ss = pyautogui.screenshot()
+    ss = ss.convert("RGB")
+    img = np.array(ss)
+    results = reader.readtext(img)
+    from difflib import SequenceMatcher
+    best = None
+    best_score = 0
+    for (bbox, text, prob) in results:
+        target_lower = target_text.lower()
+        ocr_lower = text.lower()
+
+        if target_lower in ocr_lower or ocr_lower in target_lower:
+            score = 1.0
+        else:
+            score = SequenceMatcher(None, target_lower, ocr_lower).ratio()
+        print(f"Comparing '{target_text}' with '{text}' = {score}")
+        if score > best_score:
+            best_score = score
+            best = (bbox, text)
+    if best and best_score > 0.7:
+        bbox, found_text = best
+        top_left = bbox[0]
+        bottom_right = bbox[2]
+        x = int((top_left[0] + bottom_right[0]) / 2)
+        y = int((top_left[1] + bottom_right[1]) / 2)
+        print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
+        return x, y
+    return None
 import pyttsx3
 def speak(text):
     if not voiceenabled[0]:
@@ -196,44 +231,66 @@ def get_primary_monitor_bounds():
     except:
         w, h = pyautogui.size()
         return 0, 0, w, h
+import ctypes
+try:
+    ctypes.windll.user32.SetProcessDPIAware()
+except:
+    pass
 def findscreentarget(target_description):
-    _, _, mon_w, mon_h = get_primary_monitor_bounds()
-    ss = pyautogui.screenshot(region=(0, 0, mon_w, mon_h))
+    screen_w, screen_h = pyautogui.size()
+    ss = pyautogui.screenshot()
     original_w, original_h = ss.size
-    print(f"Captured primary monitor: {original_w}x{original_h}")
+    print(f"Screenshot size: {original_w}x{original_h}")
+    print(f"Screen size: {screen_w}x{screen_h}")
     buffer = BytesIO()
-    ss.save(buffer, format="JPEG", quality=95)
+    ss.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    prompt = f"""Find the pixel center of: {target_description}
-Screenshot: {original_w}x{original_h} pixels
+    prompt = f"""
+TARGET OBJECT:
+"{target_description}"
+Return the exact pixel coordinate of the CENTER of the target object in the ORIGINAL IMAGE.
+Do not scale, do not approximate.
+Return coordinates in ORIGINAL IMAGE PIXEL SPACE ONLY.
+Return a valid JSON object only.
 Return ONLY:
-{{"found": true, "x": CENTER_X, "y": CENTER_Y}}
-X range: 0-{original_w}, Y range: 0-{original_h}
-Be pixel-perfect accurate. Also, make sure to move exactly on the thing, like the center of the object, so it doesn't like mis-click on a random area."""
+{{"found": true, "x": number, "y": number}}
+Image size:
+width={original_w}
+height={original_h}
+Rules:
+- Must be exact center
+- No estimating
+- If unclear return found:false
+- DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
+- DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
+MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
+"""
     response = client.chat.completions.create(
         model=VISION_MODEL,
-        messages=[{"role": "user", "content": [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-        ]}],
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{base64_image}"
+                    }
+                }
+            ]
+        }],
         response_format={"type": "json_object"},
-        max_tokens=50
+        max_tokens=350
     )
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
-    print(f"AI result: {data}")
-    
+    print("AI RESULT:", data)
     if not data.get("found"):
         return None
-    
     x = int(data["x"])
     y = int(data["y"])
-    
-    # Clamp to screenshot bounds
-    x = max(0, min(x, original_w - 1))
-    y = max(0, min(y, original_h - 1))
-    
-    print(f"Clicking at: {x}, {y}")
+    x, y = clamp_mouse_position(x, y)
+    print(f"FINAL CLICK: {x}, {y}")
     return x, y
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
@@ -287,7 +344,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 def summarizescreen(reqid=requestid):
                     try:
                         response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
-                        }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=80)
+                        }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
                             return
@@ -336,14 +393,18 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if update_ui:
                     update_ui(value)
             elif action == "screen_move":
-                coords = findscreentarget(value)
+                coords = findtextscreen(value)
+                if not coords:
+                    coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
                 pyautogui.moveTo(x, y, duration=0.3)
             elif action == "screen_click":
-                coords = findscreentarget(value)
+                coords = findtextscreen(value)
+                if not coords:
+                    coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
@@ -351,7 +412,11 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 pyautogui.moveTo(x, y, duration=0.3)
                 pyautogui.click()
             elif action == "screen_double_click":
-                coords = findscreentarget(value)
+                coords = findtextscreen(value)
+                if not coords:
+                    coords = findtextscreen(value)
+                if not coords:
+                    coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
@@ -359,7 +424,9 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 pyautogui.moveTo(x, y, duration=0.3)
                 pyautogui.doubleClick()
             elif action == "screen_right_click":
-                coords = findscreentarget(value)
+                coords = findtextscreen(value)
+                if not coords:
+                    coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
