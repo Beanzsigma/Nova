@@ -97,10 +97,12 @@ For screen vision:
 If the user describes something visible on screen and wants mouse interaction, use screen actions, not coordinate actions.
 unknow only if completely unrealted to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
-you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 8 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense. 
+you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 8 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense.  IF USER ASKS FOR A FORMULA OR SOMETHING, SAY ANSWER TOO LONG, AND PUT THE TEXT ANSWER TOO LONG. SAY ANSWER TOO LONG, PRESS FULL ANSWER.
 Only use speak_response when the user explicitly asks for spoken output.
-Never describe what the assistant is doing.
-No step-by-step narration allowed.
+CRITICAL: Never use speak_response to narrate what you are doing. 
+speak_response is ONLY for answering direct questions from the user.
+If the user says "open youtube and play a video", do NOT add speak_response saying "Opening YouTube" or "Playing a video". Just do it silently.
+speak_response = answering questions ONLY. Nothing else.
 Another thing. When announcing the read screen thing, don't say everything on the screen, just say the main things. Like if I ask what the answer to this problem is on my screen, just answer it. If I ask
 what my screen is about, give a brief description.
 WHEN USING read_screen:
@@ -120,7 +122,12 @@ Return:
 }
 Only return coordinates if confidence > 0.75.
 When doing multi step tasks, make sure to wait to load and stuff, just take that into account, and make sure to follow user's commands.
-Like if I say "Click the Youtube button and click on a a random yt video," click the yt button, wait a bit, then read the screen, and click on a random youtube video. This is the rough idea for most multi step tasks.
+IMPORTANT: Only use read_screen when the user EXPLICITLY asks "what is on my screen", "what can I do", "what do I see", etc. 
+DO NOT use read_screen for action sequences. For example, if user says "open youtube and play a random video", just:
+1. open youtube
+2. wait a bit
+3. click a likely video location (use screen_click to find a thumbnail or video title)
+Do NOT add read_screen unless the user asks about the screen content.
 Sometimes the user's input isn't describing text, like actually get the meaning of what the user's trying to say, and run commands. Like the youtube video thing, dont click the youtube text, but actually understand.
 If the user says "click", "select", "open", or "choose", ALWAYS use screen_click or click_mouse.
 Never respond with screen description or speak_response unless explicitly asked.
@@ -435,21 +442,9 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 #         announce(text[:60])
                 # threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == "speak_response":
-                CLICK_ACTIONS = {"screen_click","screen_double_click","click_mouse","move_mouse","screen_move"}
-                if action == 'speak_response':
-                    if any(a.get("action") in CLICK_ACTIONS for a in actions):
-                        continue
-                value = value.strip()
-                value = value.replace('Click', "Clicking")
-                value = value.replace("Open", "Opening")
-                value = value.replace("Close", "Closing")
-                value = value.replace("Go to", "Going to")
-                value = value.replace("Launch", "Launching")
                 speak(value)
                 if update_ui:
-                    cleaned  = clean_announce(value)
-                    if cleaned:
-                        update_ui(cleaned)
+                    update_ui(value)
             elif action == "screen_move":
                 coords = findtextscreen(value)
                 if not coords:
@@ -570,7 +565,7 @@ def rounded_rect(canvas, x1, y1, x2, y2, r=20, color="#0F4423", width=2):
     items.append(canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90, style="arc", **arc_kwargs))
     items.append(canvas.create_arc(x2-2*r, y2-2*r, x2, y2, start=270, extent=90, style="arc", **arc_kwargs))
     items.append(canvas.create_line(x1+r, y1, x2-r, y1, **line_kwargs))
-    items.append(canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs))
+    items.append(canvas.create_line(x1+r, y2, x2-r, y2, **line_kwargs))           
     items.append(canvas.create_line(x1, y1+r, x1, y2-r, **line_kwargs))
     items.append(canvas.create_line(x2, y1+r, x2, y2-r, **line_kwargs))
     return items
