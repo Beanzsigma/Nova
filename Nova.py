@@ -131,6 +131,8 @@ Do NOT add read_screen unless the user asks about the screen content.
 Sometimes the user's input isn't describing text, like actually get the meaning of what the user's trying to say, and run commands. Like the youtube video thing, dont click the youtube text, but actually understand.
 If the user says "click", "select", "open", or "choose", ALWAYS use screen_click or click_mouse.
 Never respond with screen description or speak_response unless explicitly asked.
+ALSO WHEN SEARCHING STUFF AND THINGS LIKE THAT WHERE THE USER ASKS YOU TO SEARCH SOMETHING UP BY CLICKING THE SEARCH BAR, MAKE SURE TO PRESS ENTER WHEN YOUR DONE.
+- GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -178,7 +180,7 @@ def findtextscreen(target_text):
         if score > best_score:
             best_score = score
             best = (bbox, text)
-    if best and best_score > 0.7:
+    if best and best_score > 0.9:
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
@@ -263,10 +265,9 @@ def get_primary_monitor_bounds():
     """Get the bounds of the primary monitor using Windows API"""
     try:
         from ctypes import windll
-        # Get primary monitor screen dimensions
         hdc = windll.user32.GetDC(0)
-        screen_w = windll.gdi32.GetDeviceCaps(hdc, 8)  # HORZRES
-        screen_h = windll.gdi32.GetDeviceCaps(hdc, 10)  # VERTRES
+        screen_w = windll.gdi32.GetDeviceCaps(hdc, 8)  
+        screen_h = windll.gdi32.GetDeviceCaps(hdc, 10)  
         windll.user32.ReleaseDC(0, hdc)
         return 0, 0, screen_w, screen_h
     except:
@@ -277,6 +278,36 @@ try:
     ctypes.windll.user32.SetProcessDPIAware()
 except:
     pass
+def filter_button_from_matches(matches, target_text, ss):
+    """Given multiple text matches, ask AI which one is the clickable button"""
+    if len(matches) <= 1:
+        return matches
+    buffer = BytesIO()
+    ss.save(buffer, format="PNG")
+    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    matches_str = "\n".join([f"Match {i}: coordinates ({x}, {y}) - text: '{text}'" 
+                            for i, (_, x, y, text) in enumerate(matches)])
+    prompt = f"""
+I found multiple instances of "{target_text}" on the screen:
+{matches_str}
+Which one is the CLICKABLE BUTTON (not just a text label or heading)?
+Answer with ONLY the number (0, 1, 2, etc) of the clickable button match.
+If multiple look like buttons, pick the most obvious/prominent one.
+Return ONLY a single number, nothing else.
+"""
+    response = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[{
+            "role": "user",
+ "content": [ {"type": "text", "text": prompt},{ "type": "image_url", "image_url": {    "url": f"data:image/png;base64,{base64_image}" } }]}],max_tokens=350)
+    try:
+        index = int(response.choices[0].message.content.strip())
+        index = max(0, min(index, len(matches) - 1))
+        print(f"AI selected match #{index} as the button")
+        return [matches[index]]  
+    except:
+        print("Could not parse AI response, using first match")
+        return [matches[0]]
 def findscreentarget(target_description):
     screen_w, screen_h = pyautogui.size()
     ss = pyautogui.screenshot()
@@ -289,9 +320,19 @@ def findscreentarget(target_description):
     prompt = f"""
 TARGET OBJECT:
 "{target_description}"
+IMPORTANT: If there are multiple instances of this text on screen:
+- Identify the one that is a CLICKABLE BUTTON or UI element
+- NOT just plain text or labels
+- Look for visual indicators: borders, distinct background, padding, shadow effects
+- Buttons typically have:
+  * Distinct background color (darker/lighter than text)
+  * Visible borders or outlines
+  * Padding around text
+  * Hover/focus state indicators
 Return the exact pixel coordinate of the CENTER of the target object in the ORIGINAL IMAGE.
 Do not scale, do not approximate.
 Return coordinates in ORIGINAL IMAGE PIXEL SPACE ONLY.
+- GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
 Return a valid JSON object only.
 Return ONLY:
 {{"found": true, "x": number, "y": number}}
@@ -463,6 +504,13 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                         continue
                     x, y = coords
                 else:
+                    # If multiple matches found, ask AI which one is the button
+                    if len(matches) > 1:
+                        ss = pyautogui.screenshot()
+                        filtered = filter_button_from_matches(matches, value, ss)
+                        if filtered:
+                            matches = filtered
+                    
                     index = parse_index(value)
                     index = min(index, len(matches)-1)
                     _, x, y, text = matches[index]
