@@ -133,6 +133,7 @@ If the user says "click", "select", "open", or "choose", ALWAYS use screen_click
 Never respond with screen description or speak_response unless explicitly asked.
 ALSO WHEN SEARCHING STUFF AND THINGS LIKE THAT WHERE THE USER ASKS YOU TO SEARCH SOMETHING UP BY CLICKING THE SEARCH BAR, MAKE SURE TO PRESS ENTER WHEN YOUR DONE.
 - GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
+NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8 WORDS, SAY ANSWER TOO LONG, PRESS FULL ANSWER. DON"T COMBINE WORDS WITH SLASHES AND STUFF LIKE THAT, IF YOU HAVE TO, JUST SAY ANSWER TOO LONG, PRESS FULL ANSWER.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -320,6 +321,7 @@ def findscreentarget(target_description):
     prompt = f"""
 TARGET OBJECT:
 "{target_description}"
+When clicking login or those types of buttons, make sure to click that, not like the login box, unless otherwise stated by the user.
 IMPORTANT: If there are multiple instances of this text on screen:
 - Identify the one that is a CLICKABLE BUTTON or UI element
 - NOT just plain text or labels
@@ -355,18 +357,7 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
         messages=[{
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{base64_image}"
-                    }
-                }
-            ]
-        }],
-        response_format={"type": "json_object"},
-        max_tokens=350
-    )
+                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=350)
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
     print("AI RESULT:", data)
@@ -782,9 +773,9 @@ def main(canvas, canvas_img):
     lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
     fullresbutton1shdw = canvas.create_text(244, 259, text="Full Answer", font=('Necosmic Personal use', 12), fill="#0a2e18")
     fullresbutton1 = canvas.create_text(241, 256, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
-    fullresbutton2shdw = canvas.create_text(524, 269, text="Full Answer", font=("Necosmic Personal use", 12), fill="#0a2e18")
-    fullresbutton2 = canvas.create_text(521, 266, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
-    rounded_rect(canvas, 448, 255, 593, 280, r=9, color="#319950", width=3)
+    fullresbutton2shdw = canvas.create_text(524, 273, text="Full Answer", font=("Necosmic Personal use", 12), fill="#0a2e18")
+    fullresbutton2 = canvas.create_text(521, 270, text="Full Answer", font=("Necosmic Personal use", 12), fill="#319950")
+    rounded_rect(canvas, 448, 259, 593, 284, r=9, color="#319950", width=3)
     rounded_rect(canvas, 165, 244, 315, 270, r=9, color="#319950", width=3)
     def enter1(e):
         canvas.itemconfig(fullresbutton1,fill="#0F4423" )
