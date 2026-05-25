@@ -732,6 +732,45 @@ def showaigif(canvas, canvas_img, textinput_window):
         animate_bg()
     animate_proc()
     return close
+def start_loading_from_thread():
+    q = queue.Queue()
+    def start():
+        try:
+            canvas = active_ui["canvas"]
+            canvas_img = active_ui["canvas_img"]
+            textinput_window = active_ui["textinput_window"]
+            if not canvas or not canvas_img or not textinput_window:
+                q.put(lambda: None)
+                return
+            close_loading = showaigif(canvas, canvas_img, textinput_window)
+            q.put(close_loading)
+        except Exception as e:
+            print("loading start error:", e)
+            q.put(lambda: None)
+    app.after(0, start)
+    try:
+        return q.get(timeout=2)
+    except queue.Empty:
+        return lambda: None
+def stop_loading_from_thread(close_loading):
+    done = threading.Event()
+    def stop():
+        try:
+            close_loading()
+        except Exception as e:
+            print("loading stop error:", e)
+        finally:
+            done.set()
+    app.after(0, stop)
+    done.wait(timeout=2)
+def run_ai_command_with_gif(commandtext):
+    close_loading = start_loading_from_thread()
+    try:
+        parsed = askgroq(commandtext)
+        actions = parsed.get("actions", [])
+    finally:
+        stop_loading_from_thread(close_loading)
+    exectuteactions(actions, user_text=commandtext)
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -764,6 +803,9 @@ def main(canvas, canvas_img):
     rectext = canvas.create_text(83, 263, text="", font=('Necosmic Personal Use', 11), fill="#319950", anchor="center")
     textinput = ctk.CTkEntry(app, width=252, height=35, fg_color="black", border_color="#319950", font=('Press Start 2P', 13))
     textinput_window = canvas.create_window(495, 150, window=textinput, anchor='center')
+    active_ui["canvas"] = canvas
+    active_ui["canvas_img"] = canvas_img
+    active_ui["textinput_window"] = textinput_window
     responsetext_shdw = canvas.create_text(523, 175, text="", font=("Press Start 2P", 13), fill="#0a2e18", anchor="n", width=290)
     responsetext= canvas.create_text(520, 172, text="", font=("Press Start 2P", 13), fill="#319950", anchor="n", width=290)
     leftresponseshdw = canvas.create_text(237, 128, text="", font=('Press Start 2P', 13), fill="#0a2e18", anchor='n', width=220)
@@ -1183,9 +1225,7 @@ def wakewordloop():
                 commandaudio = sr.AudioData(commandrecording.tobytes(), samplerate, 2)
                 commandtext = recognizer.recognize_google(commandaudio).lower()
                 print("command:", commandtext)
-                parsed = askgroq(commandtext)
-                actions = parsed.get("actions", [])
-                exectuteactions(actions, user_text=commandtext)
+                run_ai_command_with_gif(commandtext)
         except sr.UnknownValueError:
             continue
         except Exception as e:
