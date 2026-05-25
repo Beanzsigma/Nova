@@ -213,14 +213,36 @@ def find_all_text(target_text):
             score = 1.0
         else:
             score = SequenceMatcher(None, target_clean, ocr_clean).ratio()
-        if score > 0.55:
-            top_left = bbox[0]
-            bottom_right = bbox[2]
-            x = int((top_left[0] + bottom_right[0]) / 2)
-            y = int((top_left[1] + bottom_right[1]) / 2)
-            matches.append((score, x, y, text))
+        if score > 0.45:
+            xs = [p[0] for p in bbox]
+            ys = [p[1] for p in bbox]
+            x1 = int(min(xs))
+            y1 = int(min(ys))
+            x2 = int(max(xs))
+            y2 = int(max(ys))
+            pad_x = max(20, int((x2 - x1) * 1.5))
+            pad_y = max(12, int((y2 - y1) * 1.2))
+            x1 = max(0, x1 - pad_x)
+            y1 = max(0, y1 - pad_y)
+            x2 = min(pyautogui.size().width - 1, x2 + pad_x)
+            y2 = min(pyautogui.size().height - 1, y2 + pad_y)
+            x = int((x1 + x2) / 2)
+            y = int((y1 + y2) / 2)
+            matches.append((score, x, y, text, x1, y1, x2, y2))
     matches.sort(key=lambda item: item[0], reverse=True)
     return matches
+def choose_bestscreenobject(target_text, matches):
+    if not matches:
+        return None
+    if len(matches) ==1:
+        return matches[0]
+    ss = pyautogui.screenshot()
+    buffer = BytesIO()
+    ss.save(buffer, format="PNG")
+    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    canidate_lines = []
+    for i, (score, x, y, text, x1, y1, x2, y2) in enumerate(matches[:8]):
+        canidate_lines.append(f"{i}: text='{text}', score={score}, center=({x},{y}), box=({x1},{y1},{x2},{y2})")
 def parse_index(value):
     words = value.lower()
     if 'first' in words or '1st' in words:
