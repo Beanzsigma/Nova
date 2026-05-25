@@ -15,6 +15,7 @@ voiceenabled = [True]
 wakewordenabled = [True]
 tts_rate = [50]
 after_id =None
+active_ui = {"canvas": None,"canvas_img": None,"textinput_window": None}
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -274,11 +275,6 @@ def get_primary_monitor_bounds():
     except:
         w, h = pyautogui.size()
         return 0, 0, w, h
-import ctypes
-try:
-    ctypes.windll.user32.SetProcessDPIAware()
-except:
-    pass
 def filter_button_from_matches(matches, target_text, ss):
     """Given multiple text matches, ask AI which one is the clickable button"""
     if len(matches) <= 1:
@@ -682,11 +678,11 @@ def fadein(canvas):
         else:
             canvas.delete(overlay)
     fade()
-def showaigif(canvas, on_done, canvas_img, textinput_window):
+def showaigif(canvas, canvas_img, textinput_window):
     global after_id
     if after_id:
         app.after_cancel(after_id)
-        after_id= None
+        after_id = None
     proc_frames = []
     proc_gif = Image.open(getpath("Images/GIFS/AI movement.gif"))
     from PIL import ImageDraw
@@ -697,43 +693,45 @@ def showaigif(canvas, on_done, canvas_img, textinput_window):
         draw.rounded_rectangle([0, 0, 299, 299], radius=150, fill=255)
         frame.putalpha(mask)
         proc_frames.append(ImageTk.PhotoImage(frame))
-    overlay1 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple="gray50")
-    overlay2 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple='gray50')
-    overlay3 = canvas.create_rectangle(0, 0, 700, 500, fill='black', stipple='gray50')
-    procimg = canvas.create_image(350, 210, anchor='center')
+    overlay1 = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray50")
+    overlay2 = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray50")
+    overlay3 = canvas.create_rectangle(0, 0, 700, 500, fill="black", stipple="gray50")
+    procimg = canvas.create_image(350, 210, anchor="center")
+    proctextshdw = canvas.create_text(353, 390, text="Processing...", font=("Necosmic Personal Use", 18), fill="#666666", anchor="center")
+    proctext = canvas.create_text(350, 387, text="Processing...", font=("Necosmic Personal Use", 18), fill="#FFFFFF", anchor="center")
     canvas._proc_frames = proc_frames
-    proctextshdw = canvas.create_text(353, 390, text="Processing...", font=('Necosmic Personal Use', 18), fill="#666666", anchor='center')
-    proctext = canvas.create_text(350, 387, text="Processing...", font=('Necosmic Personal Use', 18), fill="#FFFFFF", anchor='center')
-    canvas.tag_raise(overlay1)
-    canvas.tag_raise(overlay2)
-    canvas.tag_raise(overlay3)
-    canvas.tag_raise(procimg)
-    canvas.tag_raise(proctextshdw)
-    canvas.tag_raise(proctext)
-    canvas.itemconfigure(textinput_window, state='hidden')
-    procafter = [None]
     canvas._overlay_items = [overlay1, overlay2, overlay3, procimg, proctextshdw, proctext]
+    for item in canvas._overlay_items:
+        canvas.tag_raise(item)
+    canvas.itemconfigure(textinput_window, state="hidden")
+    procafter = [None]
+    closed = [False]
     def animate_proc(frame_index=0):
+        if closed[0]:
+            return
         canvas.itemconfig(procimg, image=proc_frames[frame_index])
         procafter[0] = canvas.after(50, animate_proc, (frame_index + 1) % len(proc_frames))
-    animate_proc()
-    def done():
+    def close():
+        global after_id
+        if closed[0]:
+            return
+        closed[0] = True
         if procafter[0]:
             canvas.after_cancel(procafter[0])
-        canvas.delete(overlay1)
-        canvas.delete(overlay2)
-        canvas.delete(overlay3)
-        canvas.delete(procimg)
-        canvas.delete(proctext)
-        canvas.delete(proctextshdw)
-        def animate(frame_index=0):
+        for item in canvas._overlay_items:
+            try:
+                canvas.delete(item)
+            except:
+                pass
+        canvas._overlay_items = []
+        canvas.itemconfigure(textinput_window, state="normal")
+        def animate_bg(frame_index=0):
             global after_id
             canvas.itemconfig(canvas_img, image=frames[frame_index])
-            after_id = app.after(20, animate, (frame_index+1) % len(frames))
-        animate()
-        canvas.itemconfigure(textinput_window, state="normal")
-        on_done()
-    app.after(500, done)
+            after_id = app.after(20, animate_bg, (frame_index + 1) % len(frames))
+        animate_bg()
+    animate_proc()
+    return close
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -796,26 +794,34 @@ def main(canvas, canvas_img):
         if not voiceresult[0]:
             return
         result = voiceresult[0]
-        def on_done():
-            def run():
-                response = client.chat.completions.create(model=COMMAND_MODEL, messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
-                                                                                                     {'role': "user", 'content': result}], max_tokens=350) 
+        close_loading = showaigif(canvas, canvas_img, textinput_window)
+        def run():
+            try:
+                response = client.chat.completions.create(
+                    model=COMMAND_MODEL,
+                    messages=[
+                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},{"role": "user", "content": result}],max_tokens=350)
                 full = response.choices[0].message.content.strip()
                 speak(full)
-            threading.Thread(target=run, daemon=True).start()
-        showaigif(canvas, on_done, canvas_img, textinput_window)
+            finally:
+                app.after(0, close_loading)
+        threading.Thread(target=run, daemon=True).start()
     def fullanswerclicktext(e):
         if not textresult[0]:
             return
         result = textresult[0]
-        def on_done():
-            def run():
-                response = client.chat.completions.create(model=COMMAND_MODEL, messages=[{'role': 'system', "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},
-                                                                                                     {'role': "user", 'content': result}], max_tokens=350) 
+        close_loading = showaigif(canvas, canvas_img, textinput_window)
+        def run():
+            try:
+                response = client.chat.completions.create(
+                    model=COMMAND_MODEL,
+                    messages=[
+                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},  {"role": "user", "content": result}],max_tokens=350)
                 full = response.choices[0].message.content.strip()
                 speak(full)
-            threading.Thread(target=run, daemon=True).start()
-        showaigif(canvas, on_done, canvas_img, textinput_window)
+            finally:
+                app.after(0, close_loading)
+        threading.Thread(target=run, daemon=True).start()
     canvas.tag_bind(fullresbutton2, "<Enter>", enter2)
     canvas.tag_bind(fullresbutton2shdw, "<Enter>", enter2)
     canvas.tag_bind(fullresbutton2, "<Leave>", leave2)
@@ -827,25 +833,30 @@ def main(canvas, canvas_img):
     def checkvoice(canvas, rectext, rectextshdw, imgitem, recording):
         try:
             result = voiceque.get_nowait()
-            voiceresult[0] = result 
+            voiceresult[0] = result
             fullanswerready[0] = True
             recording[0] = False
             canvas.itemconfig(imgitem, image=canvas.filepic_img)
-            def on_done():
-                canvas.itemconfig(rectext, text="Processed")
-                canvas.itemconfig(rectextshdw, text="Processed")
-                def run_groq():
+            canvas.itemconfig(rectext, text="Processed")
+            canvas.itemconfig(rectextshdw, text="Processed")
+            close_loading = showaigif(canvas, canvas_img, textinput_window)
+            def run_groq():
+                try:
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
+                    app.after(0, close_loading)
                     if actions and actions[0].get("action") == "unknown":
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text="I don't understand"))
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text="I don't understand"))
-                    def update_ui (text):
+                        return
+                    def update_ui(text):
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text=text))
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text=text))
                     exectuteactions(actions, update_ui, result)
-                threading.Thread(target=run_groq, daemon=True).start()
-            showaigif(canvas, on_done, canvas_img, textinput_window)
+                except Exception as e:
+                    print("voice AI error:", e)
+                    app.after(0, close_loading)
+            threading.Thread(target=run_groq, daemon=True).start()
         except queue.Empty:
             canvas.after(100, lambda: checkvoice(canvas, rectext, rectextshdw, imgitem, recording))
     def togglerec(e):
@@ -867,22 +878,25 @@ def main(canvas, canvas_img):
         text = textinput.get().strip().lower()
         if text:
             textresult[0] = text
-            textinput.delete(0, 'end')
-            def on_done():
-                def run_groq():
+            textinput.delete(0, "end")
+            close_loading = showaigif(canvas, canvas_img, textinput_window)
+            def run_groq():
+                try:
                     parsed = askgroq(text)
                     actions = parsed.get("actions", [])
-                    if actions and actions[0].get("action") == "unknown":
-                        msg = "I don't understand"
-                        app.after(0, lambda: canvas.itemconfig(responsetext, text=msg))
-                        app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=msg))
+                    app.after(0, close_loading)
                     def update_ui(t):
-                        wrapped = "\n".join([t[i:i+35] for i in range(0, len(t), 35)])
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
-                    exectuteactions(actions, update_ui, text)
-                threading.Thread(target=run_groq, daemon=True).start()
-            showaigif(canvas, on_done, canvas_img, textinput_window)
+                    if actions and actions[0].get("action") == "unknown":
+                        app.after(0, lambda: canvas.itemconfig(responsetext, text="I don't understand"))
+                        app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text="I don't understand"))
+                    else:
+                        exectuteactions(actions, update_ui, text)
+                except Exception as e:
+                    print("text AI error:", e)
+                    app.after(0, close_loading)
+            threading.Thread(target=run_groq, daemon=True).start()
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
     canvas.tag_bind(imgitem, "<Enter>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img_hover) if not recording[0] else None)
     canvas.tag_bind(imgitem, "<Leave>", lambda e: canvas.itemconfig(imgitem, image=canvas.filepic_img) if not recording [0] else None)
