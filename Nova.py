@@ -768,9 +768,9 @@ def run_ai_command_with_gif(commandtext):
     try:
         parsed = askgroq(commandtext)
         actions = parsed.get("actions", [])
+        exectuteactions(actions, user_text=commandtext)
     finally:
         stop_loading_from_thread(close_loading)
-    exectuteactions(actions, user_text=commandtext)
 def main(canvas, canvas_img):
     clear(canvas, canvas_img)
     lastfullresponse = [None]
@@ -886,7 +886,6 @@ def main(canvas, canvas_img):
                 try:
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
-                    app.after(0, close_loading)
                     if actions and actions[0].get("action") == "unknown":
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text="I don't understand"))
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text="I don't understand"))
@@ -897,6 +896,7 @@ def main(canvas, canvas_img):
                     exectuteactions(actions, update_ui, result)
                 except Exception as e:
                     print("voice AI error:", e)
+                finally:
                     app.after(0, close_loading)
             threading.Thread(target=run_groq, daemon=True).start()
         except queue.Empty:
@@ -926,7 +926,6 @@ def main(canvas, canvas_img):
                 try:
                     parsed = askgroq(text)
                     actions = parsed.get("actions", [])
-                    app.after(0, close_loading)
                     def update_ui(t):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
@@ -937,6 +936,7 @@ def main(canvas, canvas_img):
                         exectuteactions(actions, update_ui, text)
                 except Exception as e:
                     print("text AI error:", e)
+                finally:
                     app.after(0, close_loading)
             threading.Thread(target=run_groq, daemon=True).start()
     canvas.tag_bind(imgitem, "<Button-1>", togglerec)
