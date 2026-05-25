@@ -1,3 +1,11 @@
+import ctypes
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 import customtkinter as ctk
 import sounddevice as sd
 import numpy as np
@@ -34,8 +42,6 @@ import os
 import sys
 from dotenv import load_dotenv
 load_dotenv()
-import ctypes
-ctypes.windll.shcore.SetProcessDpiAwareness(2)
 reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
@@ -205,9 +211,11 @@ def find_all_text(target_text):
         ocr_clean = text.lower().strip()
         if target_clean in ocr_clean or ocr_clean in target_clean:
             score = 1.0
+        elif target_clean in ocr_clean or ocr_clean in target_clean:
+            score = 0.9
         else:
-            score = SequenceMatcher(None, target_clean, ocr_clean).ratio()
-        if score > 0.55:
+            score  = SequenceMatcher(None, target_clean, ocr_clean).ratio()
+        if score >= 0.72:
             top_left = bbox[0]
             bottom_right = bbox[2]
             x = int((top_left[0] + bottom_right[0]) / 2)
@@ -226,7 +234,8 @@ def parse_index(value):
     return 0
 def is_visual_target(value):
     text = str(value).lower()
-    visual_words = ["icon", "logo", "image", "picture", "photo", "thumbnail",
+    visual_words = [
+        "icon", "logo", "image", "picture", "photo", "thumbnail",
         "video", "avatar", "profile picture", "taskbar", "app icon"]
     return any(word in text for word in visual_words)
 def clean_ocr_target(value):
@@ -294,11 +303,6 @@ def get_primary_monitor_bounds():
     except:
         w, h = pyautogui.size()
         return 0, 0, w, h
-import ctypes
-try:
-    ctypes.windll.user32.SetProcessDPIAware()
-except:
-    pass
 def filter_button_from_matches(matches, target_text, ss):
     """Given multiple text matches, ask AI which one is the clickable button"""
     if len(matches) <= 1:
@@ -333,83 +337,59 @@ def findscreentarget(target_description):
     screen_w, screen_h = pyautogui.size()
     ss = pyautogui.screenshot()
     original_w, original_h = ss.size
-    print(f"Screenshot size: {original_w}x{original_h}")
-    print(f"Screen size: {screen_w}x{screen_h}")
+    target_lower = str(target_description).lower()
+    crop_left = 0
+    crop_top = 0
+    if "taskbar" in target_lower:
+        crop_top = int(original_h * 0.86)
+        ss = ss.crop((0, crop_top, original_w, original_h))
+    sent_w, sent_h = ss.size
     buffer = BytesIO()
     ss.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
     prompt = f"""
-TARGET OBJECT:
+Find this target in the screenshot:
 "{target_description}"
-When clicking login or those types of buttons, make sure to click that, not like the login box, unless otherwise stated by the user.
-IMPORTANT: If there are multiple instances of this text on screen:
-- Identify the one that is a CLICKABLE BUTTON or UI element
-- NOT just plain text or labels
-- Look for visual indicators: borders, distinct background, padding, shadow effects
-- Buttons typically have:
-  * Distinct background color (darker/lighter than text)
-  * Visible borders or outlines
-  * Padding around text
-  * Hover/focus state indicators
-Return the exact pixel coordinate of the CENTER of the target object in the ORIGINAL IMAGE.
-Do not scale, do not approximate.
-Return coordinates in ORIGINAL IMAGE PIXEL SPACE ONLY.
-- GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
-Return a valid JSON object only.
-Return ONLY:
+Return ONLY JSON:
 {{"found": true, "x": number, "y": number}}
-Image size:
-width={original_w}
-height={original_h}
 Rules:
-- Must be exact center
-- No estimating
-- If unclear return found:false
-- when the user says click sign in or something, make sure to click the actual button, not some random thing. 
-- CLICK INSDE THE OBJECT BUTTON OR WHATEVER, MAKE SURE ITS THE CENTER, BECAUSE IF NOT, IT WON'T PROPERLY WORK. DONT CLICK THE EDGES, ONLY CENTER!!!
-- the user may take shortcuts when saying stuff, so use the info the user gave to do corresponding things. Like if user says click the rsm button, but u can see RSM portal, use the info and click RSM portal. Follow this with other directions.
-- DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
-- DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
-- MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
-ALWAYS MAKE SURE TO BE IN THE OBJECT, NOT THE SIDES OR THE TEXT, BUT IN THE ACTUAL OBJECT
+- x and y are pixel coordinates inside the provided screenshot.
+- Click the visual center of the actual target.
+- If this is an icon/logo/image/thumbnail/video, use what it looks like, not OCR text.
+- If this is a taskbar target, only choose an icon in the taskbar crop.
+- If not visible, return {{"found": false, "x": 0, "y": 0}}.
+Screenshot size: {sent_w}x{sent_h}
 """
     response = client.chat.completions.create(
         model=VISION_MODEL,
         messages=[{
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=350)
-    raw = response.choices[0].message.content.strip()
-    data = json.loads(raw)
+                {"type": "text", "text": prompt},    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}   ] }],response_format={"type": "json_object"},max_tokens=350)
+    data = json.loads(response.choices[0].message.content.strip())
     print("AI RESULT:", data)
     if not data.get("found"):
         return None
-    x = int(data["x"])
-    y = int(data["y"])
+    x = int(data.get("x", 0)) + crop_left
+    y = int(data.get("y", 0)) + crop_top
+    if x == 0 and y == 0:
+        return None
     x, y = clamp_mouse_position(x, y)
     print(f"FINAL CLICK: {x}, {y}")
     return x, y
 def resolve_screen_target(value):
-    coords = None
     if is_visual_target(value):
         coords = findscreentarget(value)
         if coords:
             return coords
     matches = find_all_text(value)
     if matches:
-        if len(matches) > 1:
-            ss = pyautogui.screenshot()
-            filtered = filter_button_from_matches(matches, value, ss)
-            if filtered:
-                matches = filtered
         index = parse_index(value)
         index = min(index, len(matches) - 1)
-        _, x, y, text = matches[index]
-        print(f"OCR selected: {text} at {x}, {y}")
+        score, x, y, text = matches[index]
+        print(f"OCR selected: {text} score={score} at {x}, {y}")
         return x, y
-    if not coords:
-        coords = findscreentarget(value)
-    return coords
+    return findscreentarget(value)
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
