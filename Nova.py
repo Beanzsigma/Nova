@@ -1,11 +1,3 @@
-import ctypes
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
-    try:
-        ctypes.windll.user32.SetProcessDPIAware()
-    except Exception:
-        pass
 import customtkinter as ctk
 import sounddevice as sd
 import numpy as np
@@ -42,6 +34,8 @@ import os
 import sys
 from dotenv import load_dotenv
 load_dotenv()
+import ctypes
+ctypes.windll.shcore.SetProcessDpiAwareness(2)
 reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
@@ -126,6 +120,7 @@ Return:
  "x": number,
  "y": number
 }
+Only return coordinates if confidence > 0.75.
 When doing multi step tasks, make sure to wait to load and stuff, just take that into account, and make sure to follow user's commands.
 IMPORTANT: Only use read_screen when the user EXPLICITLY asks "what is on my screen", "what can I do", "what do I see", etc. 
 DO NOT use read_screen for action sequences. For example, if user says "open youtube and play a random video", just:
@@ -139,11 +134,6 @@ Never respond with screen description or speak_response unless explicitly asked.
 ALSO WHEN SEARCHING STUFF AND THINGS LIKE THAT WHERE THE USER ASKS YOU TO SEARCH SOMETHING UP BY CLICKING THE SEARCH BAR, MAKE SURE TO PRESS ENTER WHEN YOUR DONE.
 - GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
 NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8 WORDS, SAY ANSWER TOO LONG, PRESS FULL ANSWER. DON"T COMBINE WORDS WITH SLASHES AND STUFF LIKE THAT, IF YOU HAVE TO, JUST SAY ANSWER TOO LONG, PRESS FULL ANSWER.
-If the user says icon, logo, image, video, thumbnail, app icon, Chrome icon, Discord icon, Spotify icon, or something related to a Youtube thumbnail, use screen_click or  screen_move and rely on vision, not OCR.
-Example: "click the Chrome icon" do {"actions": [{"action": "screen_click", "value": "Chrome icon"}]}
-Example: "click the Youtube thumbnail" do {"actions": [{"action": "screen_click", "value": "YouTube video thumbnail"}]}
-Example: "click a random video" do {"actions": [{"action": "screen_click", "value": "random visible video thumbnail"}]}
-Example: "click any video" do {"actions": [{"action": "screen_click", "value": "random visible video thumbnail"}]} 
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -205,44 +195,17 @@ def find_all_text(target_text):
     ss = pyautogui.screenshot()
     img = np.array(ss)
     results = reader.readtext(img)
-    target_clean = clean_ocr_target(target_text)
     matches = []
     for (bbox, text, prob) in results:
-        ocr_clean = text.lower().strip()
-        if target_clean in ocr_clean or ocr_clean in target_clean:
-            score = 1.0
-        else:
-            score = SequenceMatcher(None, target_clean, ocr_clean).ratio()
-        if score > 0.45:
-            xs = [p[0] for p in bbox]
-            ys = [p[1] for p in bbox]
-            x1 = int(min(xs))
-            y1 = int(min(ys))
-            x2 = int(max(xs))
-            y2 = int(max(ys))
-            pad_x = max(20, int((x2 - x1) * 1.5))
-            pad_y = max(12, int((y2 - y1) * 1.2))
-            x1 = max(0, x1 - pad_x)
-            y1 = max(0, y1 - pad_y)
-            x2 = min(pyautogui.size().width - 1, x2 + pad_x)
-            y2 = min(pyautogui.size().height - 1, y2 + pad_y)
-            x = int((x1 + x2) / 2)
-            y = int((y1 + y2) / 2)
-            matches.append((score, x, y, text, x1, y1, x2, y2))
-    matches.sort(key=lambda item: item[0], reverse=True)
+        score = SequenceMatcher(None, target_text.lower(), text.lower()).ratio()
+        if score > 0.6:
+            top_left = bbox[0]
+            bottom_right = bbox[2]
+            x = int((top_left[0] + bottom_right[0]) / 2)
+            y = int((top_left[1] + bottom_right[1]) / 2)
+            matches.append((score, x, y, text))
+    matches.sort(key=lambda x: x[2])
     return matches
-def choose_bestscreenobject(target_text, matches):
-    if not matches:
-        return None
-    if len(matches) ==1:
-        return matches[0]
-    ss = pyautogui.screenshot()
-    buffer = BytesIO()
-    ss.save(buffer, format="PNG")
-    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    canidate_lines = []
-    for i, (score, x, y, text, x1, y1, x2, y2) in enumerate(matches[:8]):
-        canidate_lines.append(f"{i}: text='{text}', score={score}, center=({x},{y}), box=({x1},{y1},{x2},{y2})")
 def parse_index(value):
     words = value.lower()
     if 'first' in words or '1st' in words:
@@ -252,12 +215,6 @@ def parse_index(value):
     if "third" in words or "3rd" in words:
         return 2
     return 0
-def clean_ocr_target(value):
-    text = str(value).lower().strip()
-    remove_words = ["button", "btn", "click", "press", "select", "choose", "the", "a", "an", "field", "box", "input"]
-    words = text.split()
-    words = [w for w in words if w not in remove_words]
-    return " ".join(words).strip()
 def speak(text):
     if not voiceenabled[0]:
         return
@@ -317,6 +274,11 @@ def get_primary_monitor_bounds():
     except:
         w, h = pyautogui.size()
         return 0, 0, w, h
+import ctypes
+try:
+    ctypes.windll.user32.SetProcessDPIAware()
+except:
+    pass
 def filter_button_from_matches(matches, target_text, ss):
     """Given multiple text matches, ask AI which one is the clickable button"""
     if len(matches) <= 1:
@@ -347,16 +309,6 @@ Return ONLY a single number, nothing else.
     except:
         print("Could not parse AI response, using first match")
         return [matches[0]]
-def should_use_vision_first(value):
-    text = str(value).lower()
-    vision_words = ["icon", "logo", "image", "picture", "video", "thumbnail",
-        "chrome", "spotify", "discord", "opera", "youtube",
-        "app", "profile", "avatar", "taskbar", "start menu"]
-    return any(word in text for word in vision_words)
-def is_vague_visual_target(value):
-    text = str(value).lower()
-    vague_words = ["random", "any", "a video", "some video", "thumbnail"]
-    return any(word in text for word in vague_words)
 def findscreentarget(target_description):
     screen_w, screen_h = pyautogui.size()
     ss = pyautogui.screenshot()
@@ -369,31 +321,6 @@ def findscreentarget(target_description):
     prompt = f"""
 TARGET OBJECT:
 "{target_description}"
-You are Nova's computer vision system
-You are looking at a Windows screenshot
-Very important:
-- If the target says "taskbar", ONLY look in the Windows taskbar at the bottom of the screen.
-- For taskbar targets, ignore matching icons in the browser, desktop, start menu, or webpage.
-- A taskbar icon is inside the bottom strip of the screen, usually near the center or left side.
-- If the target says "Google Chrome icon in my taskbar", find the Chrome logo only in the bottom taskbar.
-- If the target says "random video", "any video", or "a video", choose the most prominent visible video thumbnail.
-- For random/any video, do NOT return found:false just because there are multiple choices.
-- Pick a real visible video thumbnail and return its center.
-- A video thumbnail is usually a large rectangular image preview, often with a title below it.
-- The target may be an icon, logo, app icon, thumbnail, image, button, text field, or text.
-- If the target is "Chrome icon", find the Google Chrome circular red/yellow/green/blue logo.
-- If the target is an app icon, find the visual icon even if there is no readable text.
-- If the target is a video or thumbnail, click the center of the visible thumbnail/image, not the title text or the sides.
-- If the target is a search bar/text box, click inside the box near the center.
-- If the target is a button, click inside the box near the center.
-- If the target is a button, click inside the button, not the edge.
-- Prefer visible clickable UI elements over plain labels.
-- Return coordinates in the PROVIDED IMAGE coordinate system
-- Provided image size: {original_w}x{original_h}
-Return ONLY valid JSON:
-{{"found": true, "x1": 100, "y1": 200, "x2": 300, "y2": 400, "confidence": 0.0}}
-If the target is specific and you cannot find it, return:
-{{"found": false, "x1": 0, "y1": 0, "x2": 0, "y2": 0, "confidence": 0.0}}
 When clicking login or those types of buttons, make sure to click that, not like the login box, unless otherwise stated by the user.
 IMPORTANT: If there are multiple instances of this text on screen:
 - Identify the one that is a CLICKABLE BUTTON or UI element
@@ -404,12 +331,16 @@ IMPORTANT: If there are multiple instances of this text on screen:
   * Visible borders or outlines
   * Padding around text
   * Hover/focus state indicators
-Return a tight bounding box around only the clickable target, not nearby labels, shadows, or surrounding containers.
+Return the exact pixel coordinate of the CENTER of the target object in the ORIGINAL IMAGE.
 Do not scale, do not approximate.
 Return coordinates in ORIGINAL IMAGE PIXEL SPACE ONLY.
 - GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
-Return ONLY this JSON shape:
-{{"found": true, "x1": number, "y1": number, "x2": number, "y2": number, "confidence": number}}
+Return a valid JSON object only.
+Return ONLY:
+{{"found": true, "x": number, "y": number}}
+Image size:
+width={original_w}
+height={original_h}
 Rules:
 - Must be exact center
 - No estimating
@@ -420,9 +351,6 @@ Rules:
 - DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
 - DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
 MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
-- For buttons, return the inner clickable rectangle, not the whole card or section.
-- For icons, return only the icon square/circle, not the label text beside it.
-- For taskbar icons, return only that one icon slot.
 """
     response = client.chat.completions.create(
         model=VISION_MODEL,
@@ -435,37 +363,8 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
     print("AI RESULT:", data)
     if not data.get("found"):
         return None
-    if "x1" in data and "y1" in data and "x2" in data and "y2" in data:
-        x1 = int(data.get("x1", 0))
-        y1 = int(data.get("y1", 0))
-        x2 = int(data.get("x2", 0))
-        y2 = int(data.get("y2", 0))
-        if x1 == 0 and y1 == 0 and x2 == 0 and y2 == 0:
-            return None
-        box_w = abs(x2 - x1)
-        box_h = abs(y2 - y1)
-        x = int((x1 + x2) / 2)
-        y = int((y1 + y2) / 2)
-        if "button" in str(target_description).lower():
-            y = int(y1 + box_h * 0.55)
-    else:
-        x = int(data.get("x", 0))
-        y = int(data.get("y", 0))
-        if x == 0 and y == 0:
-            return None
-    confidence = data.get("confidence", None)
-    if confidence is not None:
-        confidence = float(confidence)
-        min_confidence = 0.35 if is_vague_visual_target(target_description) else 0.55
-        if confidence < min_confidence:
-            print("Vision confidence low, using coordinates anyway:", confidence)
-    else:
-        print("Vision gave no confidence, accepting coordinates anyway")
-    screen_w, screen_h = pyautogui.size()
-    scale_x = screen_w / original_w
-    scale_y = screen_h / original_h
-    x = int(x * scale_x)
-    y = int(y * scale_y)
+    x = int(data["x"])
+    y = int(data["y"])
     x, y = clamp_mouse_position(x, y)
     print(f"FINAL CLICK: {x}, {y}")
     return x, y
@@ -579,41 +478,37 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if update_ui:
                     update_ui(value)
             elif action == "screen_move":
-                coords = None
-                if should_use_vision_first(value):
-                    coords = findscreentarget(value)
-                if not coords:
-                    coords = findtextscreen(value)
+                coords = findtextscreen(value)
                 if not coords:
                     coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.moveTo(x, y, duration=0.5)
+                pyautogui.moveTo(x, y, duration=0.3)
             elif action == "screen_click":
-                coords = None
-                if should_use_vision_first(value):
+                matches = find_all_text(value)
+                if not matches:
                     coords = findscreentarget(value)
-                if not coords:
-                    matches = find_all_text(value)
-                    if matches:
-                        index = parse_index(value)
-                        index = min(index, len(matches) - 1)
-                        score, x, y, text = matches[index]
-                        coords = (x, y)
-                        print(f"Selected OCR match #{index}: {text} score={score}")
-                if not coords:
-                    coords = findscreentarget(value)
-                if not coords:
-                    announce("I cannot find it")
-                    continue
-                x, y = coords
-                pyautogui.click(x=x, y=y)
+                    if not coords:
+                        announce("I cannot find it")
+                        continue
+                    x, y = coords
+                else:
+                    if len(matches) > 1:
+                        ss = pyautogui.screenshot()
+                        filtered = filter_button_from_matches(matches, value, ss)
+                        if filtered:
+                            matches = filtered
+                    
+                    index = parse_index(value)
+                    index = min(index, len(matches)-1)
+                    _, x, y, text = matches[index]
+                    print(f"Selected match #{index}: {text}")
+                pyautogui.moveTo(x, y, duration=0.5)
+                pyautogui.click()
             elif action == "screen_double_click":
-                coords = None
-                if should_use_vision_first(value):
-                    coords = findscreentarget(value)
+                coords = findtextscreen(value)
                 if not coords:
                     coords = findtextscreen(value)
                 if not coords:
@@ -622,22 +517,20 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.doubleClick(x=x, y=y)
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.doubleClick()
             elif action == 'wait':
                 time.sleep(float(value))
             elif action == "screen_right_click":
-                coords = None
-                if should_use_vision_first(value):
-                    coords = findscreentarget(value)
-                if not coords:
-                    coords = findtextscreen(value)
+                coords = findtextscreen(value)
                 if not coords:
                     coords = findscreentarget(value)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.click(x=x, y=y, button="right")
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.click(button='right')
             elif action == "move_mouse":
                 if isinstance(value, dict):
                     x= value.get("x", 0)
