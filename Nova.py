@@ -182,7 +182,6 @@ def findtextscreen(target_text, monitor_text=""):
     for (bbox, text, prob) in results:
         target_lower = target_text.lower()
         ocr_lower = text.lower()
-
         if target_lower in ocr_lower or ocr_lower in target_lower:
             score = 1.0
         else:
@@ -567,7 +566,6 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                         filtered = filter_button_from_matches(matches, value, ss)
                         if filtered:
                             matches = filtered
-                    
                     index = parse_index(value)
                     index = min(index, len(matches)-1)
                     _, x, y, text = matches[index]
@@ -666,7 +664,6 @@ def rounded_rect(canvas, x1, y1, x2, y2, r=20, color="#0F4423", width=2):
     items = []
     arc_kwargs = {"outline": color, "width": width}
     line_kwargs = {"fill": color, "width": width}
-
     items.append(canvas.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=90, style="arc", **arc_kwargs))
     items.append(canvas.create_arc(x2-2*r, y1, x2, y1+2*r, start=0, extent=90, style="arc", **arc_kwargs))
     items.append(canvas.create_arc(x1, y2-2*r, x1+2*r, y2, start=180, extent=90, style="arc", **arc_kwargs))
@@ -1025,7 +1022,9 @@ def main(canvas, canvas_img):
     canvas.create_text(690, 10, text="Your PC", font=('Necosmic Personal Use', 17), fill="#319950", anchor="ne")
     canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
-    canvas.create_text(537, 483, text="Powered by Groq", font=('Necosmic Personal Use', 10), fill="#319950", anchor='nw')
+    canvas.create_text(518, 486, text="Crafted by sigi boi", font=('Press Start 2P', 7), fill="#319950", anchor='nw')
+    canvas.create_text(69, 126, text="Say nova!", font=("Press Start 2P", 6), fill='#0a2e18', anchor='center')
+    canvas.create_text(67, 124, text="Say nova!", font=("Press Start 2P", 6), fill="#319950", anchor="center")
     rounded_rect(canvas, 13, 308, 203, 478, r=9, color="#0a2e18", width=3)
     rounded_rect(canvas, 10, 305, 200, 475, r=9, color="#319950", width=3)
     canvas.create_text(103, 328, text="History", font=('Necosmic Personal Use', 16),fill="#0a2e18", anchor='center' )
