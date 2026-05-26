@@ -164,8 +164,7 @@ def askgroq(user_text):
         print(f"Ai erurrrrrrrrr: {e}")
         return {"actions": [{"action": "unknown"}]}
 def findtextscreen(target_text):
-    ss = pyautogui.screenshot()
-    ss = ss.convert("RGB")
+    ss, offset_x, offset_y = screenshot_monitor(target_text)
     img = np.array(ss)
     results = reader.readtext(img)
     from difflib import SequenceMatcher
@@ -187,14 +186,14 @@ def findtextscreen(target_text):
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
-        x = int((top_left[0] + bottom_right[0]) / 2)
-        y = int((top_left[1] + bottom_right[1]) / 2)
+        x = int((top_left[0] + bottom_right[0]) / 2) + offset_x
+        y = int((top_left[1] + bottom_right[1]) / 2) + offset_y
         print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
         return x, y
     return None
 import pyttsx3
 def find_all_text(target_text):
-    ss = pyautogui.screenshot()
+    ss, offset_x, offset_y = screenshot_monitor(target_text)
     img = np.array(ss)
     results = reader.readtext(img)
     matches = []
@@ -203,8 +202,8 @@ def find_all_text(target_text):
         if score > 0.6:
             top_left = bbox[0]
             bottom_right = bbox[2]
-            x = int((top_left[0] + bottom_right[0]) / 2)
-            y = int((top_left[1] + bottom_right[1]) / 2)
+            x = int((top_left[0] + bottom_right[0]) / 2) + offset_x
+            y = int((top_left[1] + bottom_right[1]) / 2) + offset_y
             matches.append((score, x, y, text))
     matches.sort(key=lambda x: x[2])
     return matches
@@ -251,19 +250,37 @@ def open_app(value, announce):
         print(f"open_app error for {app_name}: {e}")
         announce(f"Could not open {app_name}")
 def get_monitor_for_text(text=""):
-    text= str(text).lower()
-    with mss.mss() as sct:
+    text = str(text).lower()
+    with mss.MSS() as sct:
         monitors = sct.monitors
-        real_monitors = monitors[1: ]
+        real_monitors = monitors[1:]
         if not real_monitors:
             return monitors[0]
-        primary = real_monitors[0]
-        if 'second monitor' in text or 'other monitor' in text or 'monitor 2' in text:
+        primary = next((m for m in real_monitors if m["left"] == 0 and m["top"] == 0),real_monitors[0])
+        if "main monitor" in text or "primary monitor" in text:
+            return primary
+        if "second monitor" in text or "other monitor" in text or "monitor 2" in text:
             return real_monitors[1] if len(real_monitors) > 1 else primary
+        if "left monitor" in text:
+            return min(real_monitors, key=lambda m: m["left"])
+        if "right monitor" in text:
+            return max(real_monitors, key=lambda m: m["left"])
+        return primary
+def screenshot_monitor(text=""):
+    monitor = get_monitor_for_text(text)
+    with mss.MSS() as sct:
+        shot = sct.grab(monitor)
+        img = Image.frombytes("RGB", shot.size, shot.rgb)
+        return img, monitor["left"], monitor["top"]
 def clamp_mouse_position(x, y):
-    screen_w, screen_h = pyautogui.size()
-    x = max(0, min(int(x), screen_w - 1))
-    y= max(0, min(int(y), screen_h-1))
+    with mss.mss() as sct:
+        monitors = sct.monitors[1:]
+        left = min(m["left"] for m in monitors)
+        top = min(m["top"] for m in monitors)
+        right = max(m["left"] + m["width"] - 1 for m in monitors)
+        bottom = max(m["top"] + m["height"] - 1 for m in monitors)
+    x = max(left, min(int(x), right))
+    y = max(top, min(int(y), bottom))
     return x, y
 def get_dpi_scale():
     try:
@@ -317,11 +334,9 @@ Return ONLY a single number, nothing else.
         print("Could not parse AI response, using first match")
         return [matches[0]]
 def findscreentarget(target_description):
-    screen_w, screen_h = pyautogui.size()
-    ss = pyautogui.screenshot()
+    ss, offset_x, offset_y = screenshot_monitor(target_description)
     original_w, original_h = ss.size
     print(f"Screenshot size: {original_w}x{original_h}")
-    print(f"Screen size: {screen_w}x{screen_h}")
     buffer = BytesIO()
     ss.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
@@ -370,8 +385,8 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
     print("AI RESULT:", data)
     if not data.get("found"):
         return None
-    x = int(data["x"])
-    y = int(data["y"])
+    x = int(data["x"]) + offset_x
+    y = int(data["y"]) + offset_y
     x, y = clamp_mouse_position(x, y)
     print(f"FINAL CLICK: {x}, {y}")
     return x, y
@@ -384,6 +399,16 @@ def exectuteactions(actions, update_ui=None, user_text=""):
         if any(p in t for p in blocked_phrases):
             return None  
         return text
+    def with_monitor_context(value):
+        if not isinstance(value, str):
+            return value
+        user_lower = user_text.lower()
+        value_lower = value.lower()
+        monitor_words = ["second monitor", "other monitor", "monitor 2", "left monitor", "right monitor"]
+        for word in monitor_words:
+            if word in user_lower and word not in value_lower:
+                return f"{value} on {word}"
+        return value
     def announce(text):
         text = clean_announce(text)
         if not text:
@@ -414,7 +439,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 picturefider = os.path.join(os.environ["USERPROFILE"], "Pictures")
                 filename = f"screenshot_{int(time.time())}.png"
                 fullpath = os.path.join(picturefider, filename)
-                ss = pyautogui.screenshot()
+                ss, _, _ = screenshot_monitor(user_text)
                 ss.save(fullpath)
                 print(f"Ss here: {fullpath}")
                 os.startfile(fullpath)
@@ -422,7 +447,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 import cv2
                 import numpy as np
                 requestid = time.time()
-                ss= pyautogui.screenshot()
+                ss, _, _ = screenshot_monitor(user_text)
                 img = cv2.cvtColor(np.array(ss), cv2.COLOR_RGB2BGR)
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 gray  = cv2.resize(gray, None, fx=2.5, fy=2.5, interpolation =cv2.INTER_CUBIC)
@@ -485,18 +510,20 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if update_ui:
                     update_ui(value)
             elif action == "screen_move":
-                coords = findtextscreen(value)
+                target = with_monitor_context(value)
+                coords = findtextscreen(target)
                 if not coords:
-                    coords = findscreentarget(value)
+                    coords = findscreentarget(target)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
                 pyautogui.moveTo(x, y, duration=0.3)
             elif action == "screen_click":
-                matches = find_all_text(value)
+                target = with_monitor_context(value)
+                matches = find_all_text(target)
                 if not matches:
-                    coords = findscreentarget(value)
+                    coords = findscreentarget(target)
                     if not coords:
                         announce("I cannot find it")
                         continue
@@ -515,11 +542,12 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 pyautogui.moveTo(x, y, duration=0.5)
                 pyautogui.click()
             elif action == "screen_double_click":
-                coords = findtextscreen(value)
+                target = with_monitor_context(value)
+                coords = findtextscreen(target)
                 if not coords:
-                    coords = findtextscreen(value)
+                    coords = findtextscreen(target)
                 if not coords:
-                    coords = findscreentarget(value)
+                    coords = findscreentarget(target)
                 if not coords:
                     announce("I cannot find it")
                     continue
@@ -529,9 +557,10 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == 'wait':
                 time.sleep(float(value))
             elif action == "screen_right_click":
-                coords = findtextscreen(value)
+                target = with_monitor_context(value)
+                coords = findtextscreen(target)
                 if not coords:
-                    coords = findscreentarget(value)
+                    coords = findscreentarget(target)
                 if not coords:
                     announce("I cannot find it")
                     continue
