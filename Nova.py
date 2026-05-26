@@ -7,6 +7,7 @@ import time
 import base64
 from io import BytesIO
 from difflib import SequenceMatcher
+import mss
 import queue
 import time
 import easyocr
@@ -249,6 +250,16 @@ def open_app(value, announce):
     except Exception as e:
         print(f"open_app error for {app_name}: {e}")
         announce(f"Could not open {app_name}")
+def get_monitor_for_text(text=""):
+    text= str(text).lower()
+    with mss.mss() as sct:
+        monitors = sct.monitors
+        real_monitors = monitors[1: ]
+        if not real_monitors:
+            return monitors[0]
+        primary = real_monitors[0]
+        if 'second monitor' in text or 'other monitor' in text or 'monitor 2' in text:
+            return real_monitors[1] if len(real_monitors) > 1 else primary
 def clamp_mouse_position(x, y):
     screen_w, screen_h = pyautogui.size()
     x = max(0, min(int(x), screen_w - 1))
