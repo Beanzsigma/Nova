@@ -1,3 +1,14 @@
+import ctypes
+try:
+    ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+except Exception:
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 import customtkinter as ctk
 import sounddevice as sd
 import numpy as np
@@ -36,8 +47,6 @@ import os
 import sys
 from dotenv import load_dotenv
 load_dotenv()
-import ctypes
-ctypes.windll.shcore.SetProcessDpiAwareness(2)
 reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
@@ -163,8 +172,8 @@ def askgroq(user_text):
     except Exception as e:
         print(f"Ai erurrrrrrrrr: {e}")
         return {"actions": [{"action": "unknown"}]}
-def findtextscreen(target_text):
-    ss, offset_x, offset_y = screenshot_monitor(target_text)
+def findtextscreen(target_text, monitor_text=""):
+    ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
     results = reader.readtext(img)
     from difflib import SequenceMatcher
@@ -186,14 +195,14 @@ def findtextscreen(target_text):
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
-        x = int((top_left[0] + bottom_right[0]) / 2) + offset_x
-        y = int((top_left[1] + bottom_right[1]) / 2) + offset_y
+        x = int(round((top_left[0] + bottom_right[0]) / 2)) + offset_x
+        y = int(round((top_left[1] + bottom_right[1]) / 2)) + offset_y
         print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
         return x, y
     return None
 import pyttsx3
-def find_all_text(target_text):
-    ss, offset_x, offset_y = screenshot_monitor(target_text)
+def find_all_text(target_text, monitor_text=""):
+    ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
     results = reader.readtext(img)
     matches = []
@@ -202,8 +211,8 @@ def find_all_text(target_text):
         if score > 0.6:
             top_left = bbox[0]
             bottom_right = bbox[2]
-            x = int((top_left[0] + bottom_right[0]) / 2) + offset_x
-            y = int((top_left[1] + bottom_right[1]) / 2) + offset_y
+            x = int(round((top_left[0] + bottom_right[0]) / 2)) + offset_x
+            y = int(round((top_left[1] + bottom_right[1]) / 2)) + offset_y
             matches.append((score, x, y, text))
     matches.sort(key=lambda x: x[2])
     return matches
@@ -249,31 +258,44 @@ def open_app(value, announce):
     except Exception as e:
         print(f"open_app error for {app_name}: {e}")
         announce(f"Could not open {app_name}")
+def get_primary_monitor(monitors):
+    for m in monitors:
+        if m["left"] <= 0 < m["left"] + m["width"] and m["top"] <= 0 < m["top"] + m["height"]:
+            return m
+    return monitors[0]
 def get_monitor_for_text(text=""):
     text = str(text).lower()
     with mss.MSS() as sct:
-        monitors = sct.monitors
-        real_monitors = monitors[1:]
+        real_monitors = sct.monitors[1:]
         if not real_monitors:
-            return monitors[0]
-        primary = next((m for m in real_monitors if m["left"] == 0 and m["top"] == 0),real_monitors[0])
-        if "main monitor" in text or "primary monitor" in text:
-            return primary
-        if "second monitor" in text or "other monitor" in text or "monitor 2" in text:
-            return real_monitors[1] if len(real_monitors) > 1 else primary
+            return sct.monitors[0]
+        primary = get_primary_monitor(real_monitors)
+        others = [m for m in real_monitors if m != primary]
         if "left monitor" in text:
             return min(real_monitors, key=lambda m: m["left"])
         if "right monitor" in text:
             return max(real_monitors, key=lambda m: m["left"])
+        if "second monitor" in text or "other monitor" in text or "monitor 2" in text:
+            return others[0] if others else primary
         return primary
-def screenshot_monitor(text=""):
-    monitor = get_monitor_for_text(text)
+def screenshot_monitor(monitor_text=""):
+    monitor = get_monitor_for_text(monitor_text)
     with mss.MSS() as sct:
         shot = sct.grab(monitor)
         img = Image.frombytes("RGB", shot.size, shot.rgb)
         return img, monitor["left"], monitor["top"]
+def move_mouse_exact(x, y, duration=0):
+    x, y = clamp_mouse_position(x, y)
+    ctypes.windll.user32.SetCursorPos(int(x), int(y))
+    time.sleep(duration if duration else 0.01)
+def click_mouse_exact(x, y, button="left"):
+    move_mouse_exact(x, y)
+    pyautogui.click(button=button)
+def double_click_mouse_exact(x, y):
+    move_mouse_exact(x, y)
+    pyautogui.doubleClick()
 def clamp_mouse_position(x, y):
-    with mss.mss() as sct:
+    with mss.MSS() as sct:
         monitors = sct.monitors[1:]
         left = min(m["left"] for m in monitors)
         top = min(m["top"] for m in monitors)
@@ -282,13 +304,24 @@ def clamp_mouse_position(x, y):
     x = max(left, min(int(x), right))
     y = max(top, min(int(y), bottom))
     return x, y
-def get_dpi_scale():
+def get_dpi_scale(monitor=None):
+    """Get DPI scale for a specific monitor or primary monitor"""
     try:
-        from ctypes import windll
-        dc = windll.user32.GetDC(0)
-        dpi = windll.gdi32.GetDeviceCaps(dc, 88)
-        windll.user32.ReleaseDC(0, dc)
-        return dpi/ 96.0
+        from ctypes import windll, POINTER, RECT, Structure
+        if monitor and monitor.get("left") is not None:
+            x = monitor["left"] + monitor["width"] // 2
+            y = monitor["top"] + monitor["height"] // 2
+        else:
+            x, y = 0, 0
+        hmonitor = windll.user32.MonitorFromPoint(int(x), int(y), 1)
+        try:
+            dpi = windll.shcore.GetDpiForMonitor(hmonitor, 0)
+            return dpi / 96.0
+        except:
+            dc = windll.user32.GetDC(0)
+            dpi = windll.gdi32.GetDeviceCaps(dc, 88)
+            windll.user32.ReleaseDC(0, dc)
+            return dpi / 96.0
     except:
         return 1.0
 def get_primary_monitor_bounds():
@@ -333,8 +366,8 @@ Return ONLY a single number, nothing else.
     except:
         print("Could not parse AI response, using first match")
         return [matches[0]]
-def findscreentarget(target_description):
-    ss, offset_x, offset_y = screenshot_monitor(target_description)
+def findscreentarget(target_description, monitor_text=""):
+    ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     original_w, original_h = ss.size
     print(f"Screenshot size: {original_w}x{original_h}")
     buffer = BytesIO()
@@ -385,8 +418,8 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
     print("AI RESULT:", data)
     if not data.get("found"):
         return None
-    x = int(data["x"]) + offset_x
-    y = int(data["y"]) + offset_y
+    x = int(round(data["x"])) + offset_x
+    y = int(round(data["y"])) + offset_y
     x, y = clamp_mouse_position(x, y)
     print(f"FINAL CLICK: {x}, {y}")
     return x, y
@@ -510,20 +543,20 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if update_ui:
                     update_ui(value)
             elif action == "screen_move":
-                target = with_monitor_context(value)
-                coords = findtextscreen(target)
+                target = value
+                coords = findtextscreen(target, user_text)
                 if not coords:
-                    coords = findscreentarget(target)
+                    coords = findscreentarget(target, user_text)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.moveTo(x, y, duration=0.3)
+                move_mouse_exact(x, y, duration=0.3)
             elif action == "screen_click":
-                target = with_monitor_context(value)
-                matches = find_all_text(target)
+                target = value
+                matches = find_all_text(target, user_text)
                 if not matches:
-                    coords = findscreentarget(target)
+                    coords = findscreentarget(target, user_text)
                     if not coords:
                         announce("I cannot find it")
                         continue
@@ -539,34 +572,34 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     index = min(index, len(matches)-1)
                     _, x, y, text = matches[index]
                     print(f"Selected match #{index}: {text}")
-                pyautogui.moveTo(x, y, duration=0.5)
-                pyautogui.click()
+                move_mouse_exact(x, y, duration=0.5)
+                click_mouse_exact(x, y)
             elif action == "screen_double_click":
-                target = with_monitor_context(value)
-                coords = findtextscreen(target)
+                target = value
+                coords = findtextscreen(target, user_text)
                 if not coords:
-                    coords = findtextscreen(target)
+                    coords = findtextscreen(target, user_text)
                 if not coords:
-                    coords = findscreentarget(target)
+                    coords = findscreentarget(target, user_text)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.moveTo(x, y, duration=0.3)
-                pyautogui.doubleClick()
+                move_mouse_exact(x, y, duration=0.3)
+                double_click_mouse_exact(x, y)
             elif action == 'wait':
                 time.sleep(float(value))
             elif action == "screen_right_click":
-                target = with_monitor_context(value)
-                coords = findtextscreen(target)
+                target = value
+                coords = findtextscreen(target, user_text)
                 if not coords:
-                    coords = findscreentarget(target)
+                    coords = findscreentarget(target, user_text)
                 if not coords:
                     announce("I cannot find it")
                     continue
                 x, y = coords
-                pyautogui.moveTo(x, y, duration=0.3)
-                pyautogui.click(button='right')
+                move_mouse_exact(x, y, duration=0.3)
+                click_mouse_exact(x, y, button="right")
             elif action == "move_mouse":
                 if isinstance(value, dict):
                     x= value.get("x", 0)
@@ -578,7 +611,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     y =int(parts[1])
                     duration = 0.25
                 x, y= clamp_mouse_position(x, y)
-                pyautogui.moveTo(x, y, duration=duration)
+                move_mouse_exact(x, y, duration=duration)
             elif action =="move_mouse_relative":
                 if isinstance(value, dict):
                     x= int(value.get("x", 0))
@@ -591,7 +624,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     duration = 0.25
                 current_x, current_y = pyautogui.position()
                 target_x, target_y = clamp_mouse_position(current_x + x, current_y + y)
-                pyautogui.moveTo(target_x, target_y, duration=duration)
+                move_mouse_exact(target_x, target_y, duration=duration)
             elif action =="click_mouse":
                 button = str(value or "left").lower()
                 if button not in ["left", "right", "middle"]:
