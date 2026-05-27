@@ -1,3 +1,16 @@
+memoryfile = "nova_memory.json"
+memory = {"conversation": [], "facts": []}
+def load_memory():
+    global memory
+    try:
+        with open(memoryfile, "w") as f: 
+            memory = json.load(f)
+    except:
+        savememory()
+def savememory():
+    with open(memoryfile, "w") as f:
+        json.dump(memory, f, indent=4)
+load_memory()
 import ctypes
 try:
     ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
@@ -270,11 +283,11 @@ def get_monitor_for_text(text=""):
             return sct.monitors[0]
         primary = get_primary_monitor(real_monitors)
         others = [m for m in real_monitors if m != primary]
-        if "left monitor" in text:
+        if "left monitor" in text or "left screen" in text:
             return min(real_monitors, key=lambda m: m["left"])
-        if "right monitor" in text:
+        if "right monitor" in text or "right screen" in text:
             return max(real_monitors, key=lambda m: m["left"])
-        if "second monitor" in text or "other monitor" in text or "monitor 2" in text:
+        if "second monitor" in text or "other monitor" in text or "monitor 2" in text or "second screen" in text or "other screen" in text or "screen 2" in text:
             return others[0] if others else primary
         return primary
 def screenshot_monitor(monitor_text=""):
