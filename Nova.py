@@ -1,9 +1,10 @@
+import json
 memoryfile = "nova_memory.json"
 memory = {"conversation": [], "facts": []}
 def load_memory():
     global memory
     try:
-        with open(memoryfile, "w") as f: 
+        with open(memoryfile, "r") as f: 
             memory = json.load(f)
     except:
         savememory()
@@ -22,6 +23,15 @@ except Exception:
             ctypes.windll.user32.SetProcessDPIAware()
         except Exception:
             pass
+def add_to_conversation(role, content):
+    memory["conversation"].append({"role": role,"content": content})
+    memory['conversation']=memory['conversation'][-10:]
+    savememory()
+def add_fact(fact):
+    if fact not in memory['facts']:
+            memory['facts'].append(fact)
+    memory['facts'] = memory['facts'][-25:]
+    savememory()
 import customtkinter as ctk
 import sounddevice as sd
 import numpy as np
@@ -176,10 +186,16 @@ def loadsettings():
 loadsettings()
 def askgroq(user_text):
     try:
-        response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": SYSTEM_PROMPT},{"role": "user", "content": user_text}], response_format=
+        add_to_conversation('user', user_text)
+        fact_text = '\n'.join(memory['facts'])
+        messages = [{'role': 'system', 'content': SYSTEM_PROMPT + f"\n\nKnown user facts:\n{fact_text}"}]
+        messages.extend(memory['conversation'])
+        messages.append({'role': 'user', 'content': user_text})
+        response = client.chat.completions.create(model= COMMAND_MODEL, messages=messages, response_format=
                                                   {"type": "json_object"}, max_tokens=450)
         raw = response.choices[0].message.content.strip()
         print(f"AI: {raw}")
+        add_to_conversation('assistant', raw)
         parsed = json.loads(raw)
         return parsed
     except Exception as e:

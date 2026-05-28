@@ -1,0 +1,45 @@
+{
+    "conversation": [
+        {
+            "role": "user",
+            "content": "what does sigma boy mean"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma boy means independent confident young man\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "why does it mean that"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma refers to lone, self-reliant men\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "i see, where did it originate"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma male started in 2010s online forums\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "what user"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Creator user is unknown or not public\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "wait is it still alive today?"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Yes, sigma boy is still used online\"}]}"
+        }
+    ],
+    "facts": []
+}
