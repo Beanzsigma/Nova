@@ -1,4 +1,5 @@
 import json
+memoryenabled = [True]
 memoryfile = "nova_memory.json"
 memory = {"conversation": [], "facts": []}
 def load_memory():
@@ -84,6 +85,7 @@ Format:
 {"actions": [{"action": "action_name", "value": "optional_value"}, ...]}
 Available actions:
 - set_volume (value: 0-100)
+- agent_task (value: goal)
 - mute_volume
 - unmute_volume
 - screenshot
@@ -171,7 +173,7 @@ NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
-    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0]}
+    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0], 'memoryenabled': memoryenabled[0]}
     with open(SETTINGSFILE, "w") as f:
         json.dump(data, f, indent=4)
 def loadsettings():
@@ -180,6 +182,7 @@ def loadsettings():
             data = json.load(f)
         voiceenabled[0] = data.get("voiceenabled", True)
         wakewordenabled[0] = data.get("wakewordenabled", True)
+        memoryenabled[0] = data.get("memoryenabled", True)
         tts_rate[0] = max(1, min(100, int(data.get("tts_rate", 50))))
     except:
         savesettings()
@@ -265,6 +268,30 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
+def run_agent_task(goal, max_steps=10):
+    history = []
+    for step in range(max_steps):
+        ss, _, _ = screenshot_monitor()
+        buffer = BytesIO()
+        ss.save(buffer, format="PNG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        prompt = f""" You are controlling a windows PC.
+        The goal is:
+        {goal}
+        Previous steps:
+        {history}
+        Decide the next best action
+        You may:
+        - click stuff
+        - type
+        - scroll
+        - wait
+        - press keys
+        If the task is complete, return {{"done": true}}
+        Otherwise return:
+        {{"done": false, "reason": "why"}}"""
+        
+
 def open_app(value, announce):
     app_name = str(value).strip().lower()
     discord_update = os.path.expandvars(r"%LOCALAPPDATA%\Discord\Update.exe")

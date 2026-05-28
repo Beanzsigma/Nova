@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
-            "content": "what does sigma boy mean"
+            "content": "click true or false for the first question... figure out the answer"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma boy means independent confident young man\"}]}"
+            "content": "{\"actions\":[{\"action\":\"read_screen\"}]}"
         },
         {
             "role": "user",
-            "content": "why does it mean that"
+            "content": "click true or false for 1"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma refers to lone, self-reliant men\"}]}"
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"true or false button for question 1\"}]}"
         },
         {
             "role": "user",
-            "content": "i see, where did it originate"
+            "content": "click false"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Sigma male started in 2010s online forums\"}]}"
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"false button for question 1\"}]}"
         },
         {
             "role": "user",
-            "content": "what user"
+            "content": "click true"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Creator user is unknown or not public\"}]}"
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"true button for question 1\"}]}"
         },
         {
             "role": "user",
-            "content": "wait is it still alive today?"
+            "content": "click a random video"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\": [{\"action\": \"speak_response\", \"value\": \"Yes, sigma boy is still used online\"}]}"
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"video thumbnail\"}]}"
         }
     ],
     "facts": []
