@@ -2,7 +2,15 @@
     "conversation": [
         {
             "role": "user",
-            "content": "click true or false for the first question... figure out the answer"
+            "content": "click a random video"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"video thumbnail\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve algrebra test rn"
         },
         {
             "role": "assistant",
@@ -10,35 +18,27 @@
         },
         {
             "role": "user",
-            "content": "click true or false for 1"
+            "content": "ye like use the agent task thingy to solve and do it for me"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"true or false button for question 1\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the algebra test on screen, select and submit correct answers for each question.\"}]}"
         },
         {
             "role": "user",
-            "content": "click false"
+            "content": "solve the first 3 questions on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"false button for question 1\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the algebra test on screen and select the correct answers.\"}]}"
         },
         {
             "role": "user",
-            "content": "click true"
+            "content": "solve the first 3 questons on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"true button for question 1\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "click a random video"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"video thumbnail\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
         }
     ],
     "facts": []

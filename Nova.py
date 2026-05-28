@@ -275,23 +275,46 @@ def run_agent_task(goal, max_steps=10):
         buffer = BytesIO()
         ss.save(buffer, format="PNG")
         base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        prompt = f""" You are controlling a windows PC.
-        The goal is:
-        {goal}
-        Previous steps:
-        {history}
-        Decide the next best action
-        You may:
-        - click stuff
-        - type
-        - scroll
-        - wait
-        - press keys
-        If the task is complete, return {{"done": true}}
-        Otherwise return:
-        {{"done": false, "reason": "why"}}"""
-        
-
+        prompt = f""" You are controlling a windows PC to accomplish this goal:
+{goal}
+Previous actions taken:
+{history}
+Look at the current screen and decide the NEXT SINGLE ACTION to take.
+IMPORTANT: Respond with ONLY valid JSON, no other text.
+Use ONLY these actions: screen_click, screen_double_click, screen_right_click, type_text, press_key, scroll_mouse, wait, move_mouse
+RESPONSE FORMAT - must be valid JSON:
+If task is complete: {{"done": true}}
+If not complete, pick ONE action: {{"done": false, "action": "screen_click", "value": "description of what to click"}}
+Examples:
+- Click a button: {{"done": false, "action": "screen_click", "value": "answer option A"}}
+- Type text: {{"done": false, "action": "type_text", "value": "hello world"}}
+- Wait: {{"done": false, "action": "wait", "value": 2}}
+- Scroll: {{"done": false, "action": "scroll_mouse", "value": -5}}
+Remember: ONLY return JSON, pick ONE action per response.
+        """
+        try:
+            response = client.chat.completions.create(
+                model=VISION_MODEL,
+                messages=[{
+                        "role": "user",
+                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=250)
+            data = json.loads(response.choices[0].message.content)
+            print(f"Step {step+1}: {data}")
+            if data.get('done'):
+                print("task completeeeeeeeeeeeeee")
+                break
+            action_name = data.get('action')
+            action_value = data.get('value')
+            if action_name:
+                action = {"action": action_name}
+                if action_value is not None:
+                    action["value"] = action_value
+                exectuteactions([action], user_text=goal)
+                history.append(f"Step {step+1}: {action_name}")
+            time.sleep(1.5)
+        except Exception as e:
+            print(f"Error in agent task step {step+1}: {e}")
+            break
 def open_app(value, announce):
     app_name = str(value).strip().lower()
     discord_update = os.path.expandvars(r"%LOCALAPPDATA%\Discord\Update.exe")
@@ -593,6 +616,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 #     except Exception as e:
                 #         announce(text[:60])
                 # threading.Thread(target=summarizescreen, daemon=True).start()
+            elif action == 'agent_task':
+                run_agent_task(value)
             elif action == "speak_response":
                 speak(value)
                 if update_ui:
