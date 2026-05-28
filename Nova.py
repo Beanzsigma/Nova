@@ -207,7 +207,17 @@ def askgroq(user_text):
 def findtextscreen(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
-    results = reader.readtext(img)
+    # Preprocess image for better OCR
+    img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    # Upscale for better small text detection
+    img_gray = cv2.resize(img_gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+    # Improve contrast
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    img_gray = clahe.apply(img_gray)
+    # Denoise
+    img_gray = cv2.fastNlMeansDenoising(img_gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+    results = reader.readtext(img_gray)
     from difflib import SequenceMatcher
     best = None
     best_score = 0
@@ -226,8 +236,9 @@ def findtextscreen(target_text, monitor_text=""):
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
-        x = int(round((top_left[0] + bottom_right[0]) / 2)) + offset_x
-        y = int(round((top_left[1] + bottom_right[1]) / 2)) + offset_y
+        # Account for 2x upscaling
+        x = int(round((top_left[0] + bottom_right[0]) / 2)) / 2.0 + offset_x
+        y = int(round((top_left[1] + bottom_right[1]) / 2)) / 2.0 + offset_y
         print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
         return x, y
     return None
@@ -235,16 +246,22 @@ import pyttsx3
 def find_all_text(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
-    results = reader.readtext(img)
+    img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.resize(img_gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    img_gray = clahe.apply(img_gray)
+    img_gray = cv2.fastNlMeansDenoising(img_gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+    results = reader.readtext(img_gray)
     matches = []
     for (bbox, text, prob) in results:
         score = SequenceMatcher(None, target_text.lower(), text.lower()).ratio()
-        if score > 0.6:
+        if score > 0.5:
             top_left = bbox[0]
             bottom_right = bbox[2]
-            x = int(round((top_left[0] + bottom_right[0]) / 2)) + offset_x
-            y = int(round((top_left[1] + bottom_right[1]) / 2)) + offset_y
-            matches.append((score, x, y, text))
+            x = int(round((top_left[0] + bottom_right[0]) / 2)) / 2.0 + offset_x
+            y = int(round((top_left[1] + bottom_right[1]) / 2)) / 2.0 + offset_y
+            matches.append((score, int(x), int(y), text))
     matches.sort(key=lambda x: x[2])
     return matches
 def parse_index(value):
@@ -561,21 +578,20 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 ss, _, _ = screenshot_monitor(user_text)
                 img = cv2.cvtColor(np.array(ss), cv2.COLOR_RGB2BGR)
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                gray  = cv2.resize(gray, None, fx=2.5, fy=2.5, interpolation =cv2.INTER_CUBIC)
-                gray = cv2.bilateralFilter(gray, 9, 75, 75)
-                thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 7)
-                kernel = np.ones((2, 2), np.uint8)
-                thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-                config = r"--oem 3 --psm 6"
-                text= pytesseract.image_to_string(thresh, config=config)
-                text= text.strip()
+                gray = cv2.resize(gray, None, fx=3.5, fy=3.5, interpolation=cv2.INTER_CUBIC)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                gray = clahe.apply(gray)
+                gray = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+                config = r"--oem 3 --psm 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.:-()/"
+                text = pytesseract.image_to_string(gray, config=config)
+                text = text.strip()
                 if not text:
-                    text= "No readable text found on screen"
+                    text = "No readable text found on screen"
                 def summarizescreen(reqid=requestid):
                     try:
                         response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
                         }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
-                        summary = response.choices[0].message.content.strip()
+                        summary = response.choices[0].message.strip()
                         if reqid != requestid:
                             return
                         speak(summary)

@@ -2,30 +2,6 @@
     "conversation": [
         {
             "role": "user",
-            "content": "click a random video"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"video thumbnail\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve algrebra test rn"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"read_screen\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "ye like use the agent task thingy to solve and do it for me"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the algebra test on screen, select and submit correct answers for each question.\"}]}"
-        },
-        {
-            "role": "user",
             "content": "solve the first 3 questions on this test"
         },
         {
@@ -39,6 +15,30 @@
         {
             "role": "assistant",
             "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve the first 3 questions on this test"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "click false"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"false\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "answer the first 3 questions on this testr"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Answer the first 3 questions on this test on screen and select the correct answers.\"}]}"
         }
     ],
     "facts": []
