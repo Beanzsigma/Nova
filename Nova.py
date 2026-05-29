@@ -203,19 +203,15 @@ def askgroq(user_text):
         return parsed
     except Exception as e:
         print(f"Ai erurrrrrrrrr: {e}")
-        return {"actions": [{"action": "unknown"}]}
+        return {"actions": [{ "action": "speak_response", "value": "HCAI is currently down"}]}
 def findtextscreen(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
-    # Preprocess image for better OCR
     img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    # Upscale for better small text detection
     img_gray = cv2.resize(img_gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
-    # Improve contrast
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     img_gray = clahe.apply(img_gray)
-    # Denoise
     img_gray = cv2.fastNlMeansDenoising(img_gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
     results = reader.readtext(img_gray)
     from difflib import SequenceMatcher
@@ -236,7 +232,6 @@ def findtextscreen(target_text, monitor_text=""):
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
-        # Account for 2x upscaling
         x = int(round((top_left[0] + bottom_right[0]) / 2)) / 2.0 + offset_x
         y = int(round((top_left[1] + bottom_right[1]) / 2)) / 2.0 + offset_y
         print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
@@ -728,7 +723,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "double_click_mouse":
                 pyautogui.doubleClick()
             elif action == 'scroll_mouse':
-                pyautogui.scroll(int(value))
+                pyautogui.scroll(int(value)*100)
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":

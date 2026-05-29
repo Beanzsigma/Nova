@@ -1,26 +1,6 @@
 {
     "conversation": [
         {
-            "role": "user",
-            "content": "solve the first 3 questions on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the algebra test on screen and select the correct answers.\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 questons on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 questions on this test"
-        },
-        {
             "role": "assistant",
             "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
         },
@@ -39,6 +19,26 @@
         {
             "role": "assistant",
             "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Answer the first 3 questions on this test on screen and select the correct answers.\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve the first 3 questions on this test"
+        },
+        {
+            "role": "user",
+            "content": "hi"
+        },
+        {
+            "role": "user",
+            "content": "s"
+        },
+        {
+            "role": "user",
+            "content": "oas"
+        },
+        {
+            "role": "user",
+            "content": "s"
         }
     ],
     "facts": []
