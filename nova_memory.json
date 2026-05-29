@@ -2,22 +2,6 @@
     "conversation": [
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 questions of the test on screen and select the correct answers.\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "click false"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"screen_click\",\"value\":\"false\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "answer the first 3 questions on this testr"
-        },
-        {
-            "role": "assistant",
             "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Answer the first 3 questions on this test on screen and select the correct answers.\"}]}"
         },
         {
@@ -39,6 +23,22 @@
         {
             "role": "user",
             "content": "s"
+        },
+        {
+            "role": "user",
+            "content": "sigma"
+        },
+        {
+            "role": "user",
+            "content": "hello"
+        },
+        {
+            "role": "user",
+            "content": "as"
+        },
+        {
+            "role": "user",
+            "content": "g"
         }
     ],
     "facts": []

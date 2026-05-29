@@ -52,6 +52,7 @@ wakewordenabled = [True]
 tts_rate = [50]
 after_id =None
 active_ui = {"canvas": None,"canvas_img": None,"textinput_window": None}
+selected_voice = [None]
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -173,7 +174,7 @@ NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
-    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0], 'memoryenabled': memoryenabled[0]}
+    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0], 'memoryenabled': memoryenabled[0], "voice": selected_voice[0]}
     with open(SETTINGSFILE, "w") as f:
         json.dump(data, f, indent=4)
 def loadsettings():
@@ -184,6 +185,7 @@ def loadsettings():
         wakewordenabled[0] = data.get("wakewordenabled", True)
         memoryenabled[0] = data.get("memoryenabled", True)
         tts_rate[0] = max(1, min(100, int(data.get("tts_rate", 50))))
+        selected_voice[0] = data.get('voice', None)
     except:
         savesettings()
 loadsettings()
@@ -238,6 +240,11 @@ def findtextscreen(target_text, monitor_text=""):
         return x, y
     return None
 import pyttsx3
+def get_voices():
+    engine = pyttsx3.init()
+    return engine.getProperty("voices")
+for i, voice in enumerate(get_voices()):
+    print(i, voice.name)
 def find_all_text(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
@@ -274,6 +281,8 @@ def speak(text):
     def run():
         pythoncom.CoInitialize()
         engine = pyttsx3.init()
+        if selected_voice[0]:
+            engine.setProperty("voice", selected_voice[0])
         engine.setProperty('rate', 75 + int(tts_rate[0] * 2))
         engine.setProperty('volume', 1.0)
         engine.say(text)
@@ -1187,6 +1196,13 @@ def fademain(canvas, canvasbg):
             main(canvas, canvasbg)
     step()
 def settings(canvas, canvas_img):
+    voices = get_voices()
+    voice_index = [0]
+    if selected_voice[0]:
+        for i, v in enumerate(voices):
+            if v.id == selected_voice[0]:
+                voice_index[0] = i
+                break
     clear(canvas, canvas_img)
     canvas.create_text(353, 63, text="Settings", font=("Necosmic Personal Use", 38), fill="#0a2e18")
     canvas.create_text(350, 60, text="Settings", font=('Necosmic Personal Use', 38), fill="#319950")
@@ -1205,6 +1221,48 @@ def settings(canvas, canvas_img):
     wakebtn = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950", tags=wake_items)
     wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center', tags=wake_items)
     wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center', tags=wake_items)
+    voice_textshdw = canvas.create_text(353, 448, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#0a2e18")
+    voice_text = canvas.create_text(350, 445, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#319950")
+    def next_voice(e):
+        voice_index[0] = (voice_index[0]+1) % len(voices)
+        canvas.itemconfig(voice_text, text=voices[voice_index[0]].name)
+        canvas.itemconfig(voice_textshdw, text=voices[voice_index[0]].name)
+        selected_voice[0] = voices[voice_index[0]].id
+        savesettings()
+    leftvoiceshdw =  canvas.create_text(53, 448, text="<", font=("Necosmic Personal Use", 40), fill="#0a2e18")
+    leftvoice = canvas.create_text(50, 445, text="<", font=("Necosmic Personal Use", 40), fill="#319950")
+    rightvoiceshdw = canvas.create_text(653, 448, text=">", font=("Necosmic Personal Use", 40), fill="#0a2e18")
+    rightvoice = canvas.create_text(650, 445, text=">", font=("Necosmic Personal Use", 40), fill="#319950")
+    def prev_voice(e):
+        voice_index[0] = (voice_index[0]-1) % len(voices)
+        canvas.itemconfig(voice_text, text=voices[voice_index[0]].name)
+        canvas.itemconfig(voice_textshdw, text=voices[voice_index[0]].name)
+        selected_voice[0] = voices[voice_index[0]].id
+        savesettings()
+    def leftvoiceenter(e):
+        canvas.itemconfig(leftvoice, fill="#0F4423")
+        canvas.itemconfig(leftvoiceshdw, fill="#0E0D0D")
+    def leftvoiceleave(e):
+        canvas.itemconfig(leftvoice, fill="#319950")
+        canvas.itemconfig(leftvoiceshdw, fill="#0a2e18")
+    def rightvoiceenter(e):
+        canvas.itemconfig(rightvoice, fill="#0F4423")
+        canvas.itemconfig(rightvoiceshdw, fill="#0e0d0d")
+    def rightvoiceleave(e):
+        canvas.itemconfig(rightvoice, fill="#319950")
+        canvas.itemconfig(rightvoiceshdw, fill="#0a2e18")
+    canvas.tag_bind(leftvoice, "<Button-1>", prev_voice)
+    canvas.tag_bind(leftvoiceshdw, "<Button-1>", prev_voice)
+    canvas.tag_bind(rightvoice, "<Button-1>", next_voice)
+    canvas.tag_bind(rightvoiceshdw, "<Button-1>", next_voice)
+    canvas.tag_bind(rightvoice, "<Enter>", rightvoiceenter)
+    canvas.tag_bind(rightvoiceshdw, "<Enter>", rightvoiceenter)
+    canvas.tag_bind(rightvoice, '<Leave>', rightvoiceleave)
+    canvas.tag_bind(rightvoiceshdw, "<Leave>", rightvoiceleave)
+    canvas.tag_bind(leftvoice, "<Leave>", leftvoiceleave)
+    canvas.tag_bind(leftvoiceshdw, "<Leave>", leftvoiceleave)
+    canvas.tag_bind(leftvoice, "<Enter>", leftvoiceenter)
+    canvas.tag_bind(leftvoiceshdw, "<Enter>", leftvoiceenter)
     def refreshwake():
         wakestate = "normal" if wakewordenabled[0] else "hidden"
         canvas.itemconfig(wakebtn, state=wakestate)
