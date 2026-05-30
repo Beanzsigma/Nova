@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
-            "content": "s"
+            "content": "hi"
         },
         {
             "role": "user",
-            "content": "sigma"
+            "content": "hi"
+        },
+        {
+            "role": "user",
+            "content": "hi"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[]}"
+        },
+        {
+            "role": "user",
+            "content": "hi"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[]}"
         },
         {
             "role": "user",
             "content": "hello"
         },
         {
-            "role": "user",
-            "content": "as"
-        },
-        {
-            "role": "user",
-            "content": "g"
-        },
-        {
-            "role": "user",
-            "content": "s"
-        },
-        {
-            "role": "user",
-            "content": "as"
-        },
-        {
-            "role": "user",
-            "content": "ads"
-        },
-        {
-            "role": "user",
-            "content": "asd"
+            "role": "assistant",
+            "content": "{\"actions\":[]}"
         },
         {
             "role": "user",
             "content": "hi"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[]}"
         }
     ],
     "facts": []

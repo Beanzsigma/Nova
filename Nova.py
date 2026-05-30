@@ -1,4 +1,5 @@
 import json
+import requests
 memoryenabled = [True]
 memoryfile = "nova_memory.json"
 memory = {"conversation": [], "facts": []}
@@ -75,6 +76,9 @@ load_dotenv()
 reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 AIkey = os.environ.get("HACKCLUB_AI_KEY")
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "openai/gpt-4o-mini"
 client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
 COMMAND_MODEL = "openai/gpt-4.1"
 VISION_MODEL = "openai/gpt-4.1"
@@ -196,16 +200,30 @@ def askgroq(user_text):
         messages = [{'role': 'system', 'content': SYSTEM_PROMPT + f"\n\nKnown user facts:\n{fact_text}"}]
         messages.extend(memory['conversation'])
         messages.append({'role': 'user', 'content': user_text})
-        response = client.chat.completions.create(model= COMMAND_MODEL, messages=messages, response_format=
-                                                  {"type": "json_object"}, max_tokens=450)
-        raw = response.choices[0].message.content.strip()
+        try:
+            response = client.chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=450)
+            raw = response.choices[0].message.content.strip()
+        except Exception as e:
+            print("HCAI failed, swithcing to OpenRouter:", e)
+            raw = ask_openrouter(messages)
         print(f"AI: {raw}")
         add_to_conversation('assistant', raw)
-        parsed = json.loads(raw)
-        return parsed
+        return json.loads(raw)
     except Exception as e:
-        print(f"Ai erurrrrrrrrr: {e}")
-        return {"actions": [{ "action": "speak_response", "value": "HCAI is currently down"}]}
+        print("Both APIs sold:", e)
+        return {"actions": [{ "action": "speak_response","value": "AI systems unavailable"}]}
+def ask_openrouter(messages):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_KEY}","Content-Type": "application/json"}
+    data = {"model": OPENROUTER_MODEL,  "messages": messages}
+    r= requests.post(OPENROUTER_URL, headers=headers, json=data)
+    if r.status_code != 200:
+        raise Exception(f"OpenRouter erorr: {r.text}")
+    print("MODEL:", OPENROUTER_MODEL)
+    print("KEY FOUND:", bool(OPENROUTER_KEY))
+    print("STATUS:", r.status_code)
+    print("BODY:", r.text)
+    return r.json()["choices"][0]["message"]["content"]
 def findtextscreen(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
