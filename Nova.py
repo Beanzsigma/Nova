@@ -1442,7 +1442,7 @@ def wakewordloop():
             if "nova" in text and current - lastrigger >cooldown:
                 lastrigger = current
                 print("deteced word")
-                speak("Yes?")
+                speak("How can I help?")
                 commandrecording = sd.rec(int(5*samplerate), samplerate=samplerate, channels=1, dtype="int16")
                 sd.wait()
                 commandaudio = sr.AudioData(commandrecording.tobytes(), samplerate, 2)

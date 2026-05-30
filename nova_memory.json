@@ -1,26 +1,6 @@
 {
     "conversation": [
         {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Answer the first 3 questions on this test on screen and select the correct answers.\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 questions on this test"
-        },
-        {
-            "role": "user",
-            "content": "hi"
-        },
-        {
-            "role": "user",
-            "content": "s"
-        },
-        {
-            "role": "user",
-            "content": "oas"
-        },
-        {
             "role": "user",
             "content": "s"
         },
@@ -39,6 +19,26 @@
         {
             "role": "user",
             "content": "g"
+        },
+        {
+            "role": "user",
+            "content": "s"
+        },
+        {
+            "role": "user",
+            "content": "as"
+        },
+        {
+            "role": "user",
+            "content": "ads"
+        },
+        {
+            "role": "user",
+            "content": "asd"
+        },
+        {
+            "role": "user",
+            "content": "hi"
         }
     ],
     "facts": []
