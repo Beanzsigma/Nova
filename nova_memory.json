@@ -2,11 +2,27 @@
     "conversation": [
         {
             "role": "user",
-            "content": "hi"
+            "content": "hello"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
         },
         {
             "role": "user",
-            "content": "hi"
+            "content": "heelo\\"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "gu"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
         },
         {
             "role": "user",
@@ -14,15 +30,7 @@
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[]}"
-        },
-        {
-            "role": "user",
-            "content": "hi"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[]}"
+            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
         },
         {
             "role": "user",
@@ -30,15 +38,7 @@
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[]}"
-        },
-        {
-            "role": "user",
-            "content": "hi"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[]}"
+            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
         }
     ],
     "facts": []

@@ -136,7 +136,7 @@ For screen vision:
 - "double click the Chrome icon" do {"actions": [{"action": "screen_double_click", "value": "Chrome icon"}]}
 - "right click the file named Nova.py" do {"actions": [{"action": "screen_right_click", "value": "file named Nova.py"}]}
 If the user describes something visible on screen and wants mouse interaction, use screen actions, not coordinate actions.
-unknow only if completely unrealted to everything above
+unknown only if completely un-related to everything above
 When using speak_response, keep answers shor and direct. Just the answer, nothing else. But repeat the question asked, like when someone asks what 55 + 35 is, 
 you have to say the answer to 55 + 35 is 90. Answer like that. You can give responses up to 8 WORDS -- HARD CAP. shorten thing if u need to, but it still needs to make sense.  IF USER ASKS FOR A FORMULA OR SOMETHING, SAY ANSWER TOO LONG, AND PUT THE TEXT ANSWER TOO LONG. SAY ANSWER TOO LONG, PRESS FULL ANSWER.
 Only use speak_response when the user explicitly asks for spoken output.
@@ -613,7 +613,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     try:
                         response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
                         }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
-                        summary = response.choices[0].message.strip()
+                        summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
                             return
                         speak(summary)
@@ -957,6 +957,9 @@ def run_ai_command_with_gif(commandtext):
     try:
         parsed = askgroq(commandtext)
         actions = parsed.get("actions", [])
+        if not actions or actions[0].get("action") == "unknown":
+            print("Blocked invalid response")
+            return
         exectuteactions(actions, user_text=commandtext)
     finally:
         stop_loading_from_thread(close_loading)
@@ -1076,6 +1079,7 @@ def main(canvas, canvas_img):
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
                     if actions and actions[0].get("action") == "unknown":
+                        actions = [{"action": "speak_response","value": "I didn't understand that command"}]
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text="I don't understand"))
                         app.after(0, lambda: canvas.itemconfig(leftresponseshdw, text="I don't understand"))
                         return
@@ -1122,6 +1126,7 @@ def main(canvas, canvas_img):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text="I don't understand"))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text="I don't understand"))
                     else:
+                        print("ACTIONS:", actions)
                         exectuteactions(actions, update_ui, text)
                 except Exception as e:
                     print("text AI error:", e)
