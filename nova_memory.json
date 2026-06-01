@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
-            "content": "hello"
+            "content": "r u a poopy butt"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Nope, I am not that!\"}]}"
         },
         {
             "role": "user",
-            "content": "heelo\\"
+            "content": "r u sure?"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Yes, absolutely sure!\"}]}"
         },
         {
             "role": "user",
-            "content": "gu"
+            "content": "hm?"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Is there something you want?\"}]}"
         },
         {
             "role": "user",
-            "content": "hi"
+            "content": "hello brother"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hey there, what's up brother?\"}]}"
         },
         {
             "role": "user",
-            "content": "hello"
+            "content": "my frend said 2+2=5"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"unknown\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"2 plus 2 equals 4, not 5\"}]}"
         }
     ],
     "facts": []

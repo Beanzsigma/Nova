@@ -175,6 +175,19 @@ Never respond with screen description or speak_response unless explicitly asked.
 ALSO WHEN SEARCHING STUFF AND THINGS LIKE THAT WHERE THE USER ASKS YOU TO SEARCH SOMETHING UP BY CLICKING THE SEARCH BAR, MAKE SURE TO PRESS ENTER WHEN YOUR DONE.
 - GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
 NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8 WORDS, SAY ANSWER TOO LONG, PRESS FULL ANSWER. DON"T COMBINE WORDS WITH SLASHES AND STUFF LIKE THAT, IF YOU HAVE TO, JUST SAY ANSWER TOO LONG, PRESS FULL ANSWER.
+Only use unknown when the input is meaningless, unintelligible,
+or unrelated to both conversation and desktop control.
+For greetings, thanks, small talk, and normal questions,
+use speak_response.
+If the user input is conversational (greetings, thanks, small talk, etc.)
+do not return unknown.
+Use speak_response with a short natural response.
+Examples:
+"hi" -> {"actions":[{"action":"speak_response","value":"Hello"}]}
+"thanks" -> {"actions":[{"action":"speak_response","value":"You're welcome"}]}
+"how are you" -> {"actions":[{"action":"speak_response","value":"I'm doing well"}]}
+Add some extra words to add tone or whatever, do what you think is best.
+DON'T SOUND LIKE A ROBOT, add words if you need to, feel free, just don't break the limit.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -200,6 +213,7 @@ def askgroq(user_text):
         messages = [{'role': 'system', 'content': SYSTEM_PROMPT + f"\n\nKnown user facts:\n{fact_text}"}]
         messages.extend(memory['conversation'])
         messages.append({'role': 'user', 'content': user_text})
+        print(json.dumps(messages, indent=2))
         try:
             response = client.chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=450)
             raw = response.choices[0].message.content.strip()
