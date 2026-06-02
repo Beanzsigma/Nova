@@ -215,17 +215,22 @@ def loadsettings():
         savesettings()
 loadsettings()
 def compute_confidence(prob, text, target):
-    c1 = prob
-    c2 = min(len(text), len(target)) / max(len(text), len(target), 1)
-    t = target.lower()
-    o = text.lower()
+    import difflib
+    t = target.lower().strip()
+    o = text.lower().strip()
+    c_ocr = float(prob)
     if t == o:
-        c3 = 1.0
-    elif t in o or o in t:
-        c3 = 0.85
+        return 1.0
+    if t in o or o in t:
+        text_sim = 0.9
     else:
-        c3 = 0.0
-    return (c1 * 0.7) + (c2 * 0.1) + (c3 * 0.2)
+        text_sim = difflib.SequenceMatcher(None, t, o).ratio()
+    length_sim = min(len(t), len(o)) / max(len(t), len(o), 1)
+    return (
+        c_ocr * 0.55 +
+        text_sim * 0.35 +
+        length_sim * 0.10
+    )
 def askgroq(user_text):
     try:
         add_to_conversation('user', user_text)
@@ -280,7 +285,7 @@ def findtextscreen(target_text, monitor_text=""):
         if score > best_score:
             best_score = score
             best = (bbox, text)
-    if best and best_score > 0.67:
+    if best and best_score > 0.5:
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
@@ -308,7 +313,9 @@ def find_all_text(target_text, monitor_text=""):
     matches = []
     for (bbox, text, prob) in results:
         base_conf = float(prob)
-        score = SequenceMatcher(None, target_text.lower(), text.lower()).ratio()
+        sim = SequenceMatcher(None, target_text.lower().strip(), text.lower().strip()).ratio()
+        ocr_weight = float(prob)
+        score = (sim * 0.7) + (ocr_weight * 0.3)
         if score > 0.5:
             top_left = bbox[0]
             bottom_right = bbox[2]

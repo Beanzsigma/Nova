@@ -2,7 +2,7 @@
     "conversation": [
         {
             "role": "user",
-            "content": "solve the frist 3 problems on this test"
+            "content": "solve the first 3 prolbems on the test"
         },
         {
             "role": "assistant",
@@ -10,35 +10,35 @@
         },
         {
             "role": "user",
-            "content": "solve the first 3 problems on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 problems on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 problems on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 problems"
+            "content": "solve first 3 probs"
         },
         {
             "role": "assistant",
             "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve the first 3 problems on the test"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve the first 3 problem"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve the problem type the answer in and click ok"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the problem\"}, {\"action\":\"screen_click\",\"value\":\"answer box\"}, {\"action\":\"type_text\",\"value\":\"[ANSWER]\"}, {\"action\":\"screen_click\",\"value\":\"OK button\"}]}"
         }
     ],
     "facts": []
