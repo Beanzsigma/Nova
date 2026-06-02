@@ -1,4 +1,5 @@
 import json
+from difflib import SequenceMatcher
 import requests
 memoryenabled = [True]
 memoryfile = "nova_memory.json"
@@ -188,6 +189,13 @@ Examples:
 "how are you" -> {"actions":[{"action":"speak_response","value":"I'm doing well"}]}
 Add some extra words to add tone or whatever, do what you think is best.
 DON'T SOUND LIKE A ROBOT, add words if you need to, feel free, just don't break the limit.
+WHEN YOUR DONE WITH TASKS OR SOMETHING, MAKE SURE TO SAY ANNOUNCE LIKE "Task completed"
+When clicking something in a checklist, or smth related to that, make sure to click the circle corresponding to the answer or whatever.
+If an action fails, do NOT change strategy.
+Retry the same action with improved precision.
+Do not re-plan unless explicitly instructed.
+You will receive success/failure signals from the executor.
+REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -206,6 +214,18 @@ def loadsettings():
     except:
         savesettings()
 loadsettings()
+def compute_confidence(prob, text, target):
+    c1 = prob
+    c2 = min(len(text), len(target)) / max(len(text), len(target), 1)
+    t = target.lower()
+    o = text.lower()
+    if t == o:
+        c3 = 1.0
+    elif t in o or o in t:
+        c3 = 0.85
+    else:
+        c3 = 0.0
+    return (c1 * 0.7) + (c2 * 0.1) + (c3 * 0.2)
 def askgroq(user_text):
     try:
         add_to_conversation('user', user_text)
@@ -252,17 +272,15 @@ def findtextscreen(target_text, monitor_text=""):
     best = None
     best_score = 0
     for (bbox, text, prob) in results:
+        base_conf = float(prob)
         target_lower = target_text.lower()
         ocr_lower = text.lower()
-        if target_lower in ocr_lower or ocr_lower in target_lower:
-            score = 1.0
-        else:
-            score = SequenceMatcher(None, target_lower, ocr_lower).ratio()
+        score = compute_confidence(prob, text, target_text)
         print(f"Comparing '{target_text}' with '{text}' = {score}")
         if score > best_score:
             best_score = score
             best = (bbox, text)
-    if best and best_score > 0.9:
+    if best and best_score > 0.67:
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
@@ -289,6 +307,7 @@ def find_all_text(target_text, monitor_text=""):
     results = reader.readtext(img_gray)
     matches = []
     for (bbox, text, prob) in results:
+        base_conf = float(prob)
         score = SequenceMatcher(None, target_text.lower(), text.lower()).ratio()
         if score > 0.5:
             top_left = bbox[0]
@@ -321,17 +340,19 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
-def run_agent_task(goal, max_steps=10):
+def run_agent_task(goal, max_steps=25):
     history = []
     for step in range(max_steps):
         ss, _, _ = screenshot_monitor()
         buffer = BytesIO()
         ss.save(buffer, format="PNG")
-        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")  
         prompt = f""" You are controlling a windows PC to accomplish this goal:
 {goal}
 Previous actions taken:
 {history}
+When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
+MAKE SURE YOU ACTUALLY CLICK THE BUTTON, OR THE ASKED THING.
 Look at the current screen and decide the NEXT SINGLE ACTION to take.
 IMPORTANT: Respond with ONLY valid JSON, no other text.
 Use ONLY these actions: screen_click, screen_double_click, screen_right_click, type_text, press_key, scroll_mouse, wait, move_mouse
@@ -344,13 +365,14 @@ Examples:
 - Wait: {{"done": false, "action": "wait", "value": 2}}
 - Scroll: {{"done": false, "action": "scroll_mouse", "value": -5}}
 Remember: ONLY return JSON, pick ONE action per response.
+REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
         """
         try:
             response = client.chat.completions.create(
                 model=VISION_MODEL,
                 messages=[{
                         "role": "user",
-                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=250)
+                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=500)
             data = json.loads(response.choices[0].message.content)
             print(f"Step {step+1}: {data}")
             if data.get('done'):
@@ -363,7 +385,7 @@ Remember: ONLY return JSON, pick ONE action per response.
                 if action_value is not None:
                     action["value"] = action_value
                 exectuteactions([action], user_text=goal)
-                history.append(f"Step {step+1}: {action_name}")
+                history.append(f"Step {step+1}: {action_name} -> {action_value}")
             time.sleep(1.5)
         except Exception as e:
             print(f"Error in agent task step {step+1}: {e}")
@@ -435,6 +457,17 @@ def clamp_mouse_position(x, y):
     x = max(left, min(int(x), right))
     y = max(top, min(int(y), bottom))
     return x, y
+def verify_action_success(before_img, after_img, expected_text=None):
+    before = np.array(before_img)
+    after = np.array(after_img)
+    diff = np.mean(np.abs(before - after))
+    if diff < 1.0:
+        return False
+    if expected_text:
+        text = pytesseract.image_to_string(after_img).lower()
+        if expected_text.lower() in text:
+            return True
+    return True
 def get_dpi_scale(monitor=None):
     """Get DPI scale for a specific monitor or primary monitor"""
     try:
@@ -537,13 +570,15 @@ Rules:
 - DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
 - DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
 MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
+When clicking something in a checklist, or smth related to that, make sure to click the circle corresponding to the answer or whatever.
+When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
 """
     response = client.chat.completions.create(
         model=VISION_MODEL,
         messages=[{
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=350)
+                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=400)
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
     print("AI RESULT:", data)
@@ -554,6 +589,12 @@ MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the use
     x, y = clamp_mouse_position(x, y)
     print(f"FINAL CLICK: {x}, {y}")
     return x, y
+def screenshot_diff(img1, img2):
+    a = np.array(img1)
+    b = np.array(img2)
+    if a.shape != b.shape:
+        return 1.0  
+    return np.mean(np.abs(a.astype("int16") - b.astype("int16")))
 def exectuteactions(actions, update_ui=None, user_text=""):
     hasreadscreen = any(a.get("action") == "read_screen" for a in actions)
     pythoncom.CoInitialize()
@@ -703,8 +744,17 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     index = min(index, len(matches)-1)
                     _, x, y, text = matches[index]
                     print(f"Selected match #{index}: {text}")
+                before = screenshot_monitor(user_text)[0]
                 move_mouse_exact(x, y, duration=0.5)
                 click_mouse_exact(x, y)
+                time.sleep(0.5)
+                after = screenshot_monitor(user_text)[0]
+                diff = screenshot_diff(before, after)
+                print("CLICK DIFF:", diff)
+                if diff < 1.0:
+                    print("CLICK FAILED → retry once")
+                    move_mouse_exact(x, y, duration=0.3)
+                    click_mouse_exact(x, y)
             elif action == "screen_double_click":
                 target = value
                 coords = findtextscreen(target, user_text)
@@ -782,6 +832,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
             elif action == "sleep_pc":
                 subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
+                
         except Exception as e:
             print(f"errorr {action}: {e}")
 ctk.set_appearance_mode('dark')

@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
-            "content": "r u a poopy butt"
+            "content": "solve the frist 3 problems on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Nope, I am not that!\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
         },
         {
             "role": "user",
-            "content": "r u sure?"
+            "content": "solve the first 3 problems on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Yes, absolutely sure!\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
         },
         {
             "role": "user",
-            "content": "hm?"
+            "content": "solve the first 3 problems on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Is there something you want?\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
         },
         {
             "role": "user",
-            "content": "hello brother"
+            "content": "solve the first 3 problems on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hey there, what's up brother?\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
         },
         {
             "role": "user",
-            "content": "my frend said 2+2=5"
+            "content": "solve the first 3 problems"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"2 plus 2 equals 4, not 5\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems\"}]}"
         }
     ],
     "facts": []
