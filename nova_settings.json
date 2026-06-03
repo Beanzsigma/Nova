@@ -2,6 +2,5 @@
     "voiceenabled": true,
     "wakewordenabled": true,
     "tts_rate": 50,
-    "memoryenabled": true,
-    "voice": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\TTS_MS_EN-US_ZIRA_11.0"
+    "api_key": ""
 }

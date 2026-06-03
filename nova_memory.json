@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
+            "content": "solve problem 3"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem number three.\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve rpoblem 3"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem three.\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "scroll to problem 3"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":300}, {\"action\":\"screen_click\", \"value\":\"Problem three\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "solve problem 3"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem three.\"}]}"
+        },
+        {
+            "role": "user",
             "content": "hi"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! How can I assist you today?\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first problem on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem on test.\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "scroll down"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":-100}]}"
-        },
-        {
-            "role": "user",
-            "content": "scroll dwon"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":-100}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve the first 3 questions on this test"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve first three questions on test.\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! How can I assist you?\"}]}"
         }
     ],
     "facts": []

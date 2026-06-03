@@ -4,6 +4,8 @@ import requests
 memoryenabled = [True]
 memoryfile = "nova_memory.json"
 memory = {"conversation": [], "facts": []}
+api_key = [""]
+client_cache = {'key': None, 'client': None}
 def load_memory():
     global memory
     try:
@@ -80,7 +82,14 @@ AIkey = os.environ.get("HACKCLUB_AI_KEY")
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
-client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
+def get_client():
+    key = api_key[0].strip() or os.environ.get("HACKCLUB_AI_KEY", "").strip()
+    if not key:
+        raise ValueError('Missing Hack Club API key')
+    if client_cache['client'] is None or client_cache['key'] !=key:
+        client_cache['key'] = key
+        client_cache['client'] = OpenAI(api_key=key, base_url="https://ai.hackclub.com/proxy/v1")
+    return client_cache['client']
 COMMAND_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
@@ -198,10 +207,14 @@ Do not re-plan unless explicitly instructed.
 You will receive success/failure signals from the executor.
 REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
 If the user asks to solve something on the screen, or a task in general, use the agent_task (value: goal) feature. This is for multiple tasks btw. If your unsure, just ask the user if they want the answers or the task completed or smth.
+FOR SMALL SCROLLS: scroll 60 
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
-    data = {"voiceenabled": voiceenabled[0],"wakewordenabled": wakewordenabled[0],"tts_rate": tts_rate[0], 'memoryenabled': memoryenabled[0], "voice": selected_voice[0]}
+    data = {"voiceenabled": voiceenabled[0],
+        "wakewordenabled": wakewordenabled[0],
+        "tts_rate": tts_rate[0],
+        "api_key": api_key[0]}
     with open(SETTINGSFILE, "w") as f:
         json.dump(data, f, indent=4)
 def loadsettings():
@@ -210,10 +223,17 @@ def loadsettings():
             data = json.load(f)
         voiceenabled[0] = data.get("voiceenabled", True)
         wakewordenabled[0] = data.get("wakewordenabled", True)
-        memoryenabled[0] = data.get("memoryenabled", True)
         tts_rate[0] = max(1, min(100, int(data.get("tts_rate", 50))))
-        selected_voice[0] = data.get('voice', None)
+        api_key[0] = data.get("api_key", "")
     except:
+        savesettings()
+def ask_for_api_key_if_missing():
+    if api_key[0].strip():
+        return
+    dialog = ctk.CTkInputDialog(title='Hack CLub API Key', text='Enter your Hack Club AI API key:')
+    key = dialog.get_input()
+    if key:
+        api_key[0] = key.strip()
         savesettings()
 loadsettings()
 def compute_confidence(prob, text, target):
@@ -242,7 +262,7 @@ def askgroq(user_text):
         messages.append({'role': 'user', 'content': user_text})
         print(json.dumps(messages, indent=2))
         try:
-            response = client.chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=450)
+            response = get_client().chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=450)
             raw = response.choices[0].message.content.strip()
         except Exception as e:
             print("HCAI failed, swithcing to OpenRouter:", e)
@@ -360,7 +380,7 @@ def speak(text):
         engine.runAndWait()
         pythoncom.CoUninitialize()
     threading.Thread(target=run, daemon=True).start()
-def run_agent_task(goal, max_steps=25):
+def run_agent_task(goal, max_steps=50):
     history = []
     for step in range(max_steps):
         ss, _, _ = screenshot_monitor()
@@ -391,13 +411,14 @@ REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
 MUST BE VALID JSON, AND ALWAYS FOLLOW THE USER'S REQUEST!
 If something doesn't work, don't keep trying it. Try something else that you think will work. 
 Don't say the answers to everything before doing something, just do the actions and say it with the action.
+FOR SMALL SCROLLS: scroll 60 
         """
         try:
-            response = client.chat.completions.create(
+            response = get_client().chat.completions.create(
                 model=VISION_MODEL,
                 messages=[{
                         "role": "user",
-                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=500)
+                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=750)
             content = response.choices[0].message.content
             print("RAW RESPONSE:")
             print(content)
@@ -550,7 +571,7 @@ Answer with ONLY the number (0, 1, 2, etc) of the clickable button match.
 If multiple look like buttons, pick the most obvious/prominent one.
 Return ONLY a single number, nothing else.
 """
-    response = client.chat.completions.create(
+    response = get_client().chat.completions.create(
         model=VISION_MODEL,
         messages=[{
             "role": "user",
@@ -609,7 +630,7 @@ When clicking something in a checklist, or smth related to that, make sure to cl
 When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
 ALWAYS CLICK THE THING THAT MAKES THE MOST SENSE.
 """
-    response = client.chat.completions.create(
+    response = get_client().chat.completions.create(
         model=VISION_MODEL,
         messages=[{
             "role": "user",
@@ -702,7 +723,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     text = "No readable text found on screen"
                 def summarizescreen(reqid=requestid):
                     try:
-                        response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
+                        response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
                         }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
@@ -854,7 +875,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "double_click_mouse":
                 pyautogui.doubleClick()
             elif action == 'scroll_mouse':
-                pyautogui.scroll(int(value)*69)
+                pyautogui.scroll(int(value)*65)
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":
@@ -1076,7 +1097,7 @@ def main(canvas, canvas_img):
     fullanswerready = [False]
     def getfullanswer(result):
         def run():
-            response = client.chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
+            response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
                                                        {"role": "user", "content": result} ], max_tokens=350)
             full = response.choices[0].message.content.strip()
             speak(full)
@@ -1136,7 +1157,7 @@ def main(canvas, canvas_img):
         close_loading = showaigif(canvas, canvas_img, textinput_window)
         def run():
             try:
-                response = client.chat.completions.create(
+                response =get_client().chat.completions.create(
                     model=COMMAND_MODEL,
                     messages=[
                         {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},{"role": "user", "content": result}],max_tokens=350)
@@ -1152,7 +1173,7 @@ def main(canvas, canvas_img):
         close_loading = showaigif(canvas, canvas_img, textinput_window)
         def run():
             try:
-                response = client.chat.completions.create(
+                response = get_client().chat.completions.create(
                     model=COMMAND_MODEL,
                     messages=[
                         {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},  {"role": "user", "content": result}],max_tokens=350)
@@ -1338,6 +1359,11 @@ def settings(canvas, canvas_img):
     voicecheck = canvas.create_rectangle(148, 122, 168, 142,outline='#319950',width=2,fill="black",stipple="gray12")
     voicebtnshdw = canvas.create_text(161, 135,text="✓",font=("Arial", 14),fill="#0a2e18")
     voicebtn = canvas.create_text(158, 132,text="✓",font=("Arial", 14),fill="#319950")
+    canvas.create_text(353, 333, text='Hack Club API Key', font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    canvas.create_text(350, 330, text="Hack Club API Key", font=("Necosmic Personal Use", 18), fill="#319950")
+    apikey_input = ctk.CTkEntry(app, width= 360, height=35, fg_color="black", border_color="#319950", text_color="#319950", show="*")
+
+
     state = "normal" if voiceenabled[0] else "hidden"
     canvas.itemconfig(voicebtn, state=state)
     canvas.itemconfig(voicebtnshdw, state=state)
@@ -1349,18 +1375,18 @@ def settings(canvas, canvas_img):
     wakebtn = canvas.create_text(158, 182, text="✓", font=("Arial", 14), fill="#319950", tags=wake_items)
     wakelabelshdw = canvas.create_text(385, 183, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center', tags=wake_items)
     wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center', tags=wake_items)
-    voice_textshdw = canvas.create_text(353, 448, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#0a2e18")
-    voice_text = canvas.create_text(350, 445, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#319950")
+    voice_textshdw = canvas.create_text(353, 483, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#0a2e18")
+    voice_text = canvas.create_text(350, 480, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#319950")
     def next_voice(e):
         voice_index[0] = (voice_index[0]+1) % len(voices)
         canvas.itemconfig(voice_text, text=voices[voice_index[0]].name)
         canvas.itemconfig(voice_textshdw, text=voices[voice_index[0]].name)
         selected_voice[0] = voices[voice_index[0]].id
         savesettings()
-    leftvoiceshdw =  canvas.create_text(53, 448, text="<", font=("Necosmic Personal Use", 40), fill="#0a2e18")
-    leftvoice = canvas.create_text(50, 445, text="<", font=("Necosmic Personal Use", 40), fill="#319950")
-    rightvoiceshdw = canvas.create_text(653, 448, text=">", font=("Necosmic Personal Use", 40), fill="#0a2e18")
-    rightvoice = canvas.create_text(650, 445, text=">", font=("Necosmic Personal Use", 40), fill="#319950")
+    leftvoiceshdw =  canvas.create_text(53, 483, text="<", font=("Necosmic Personal Use", 40), fill="#0a2e18")
+    leftvoice = canvas.create_text(50, 480, text="<", font=("Necosmic Personal Use", 40), fill="#319950")
+    rightvoiceshdw = canvas.create_text(653, 483, text=">", font=("Necosmic Personal Use", 40), fill="#0a2e18")
+    rightvoice = canvas.create_text(650, 480, text=">", font=("Necosmic Personal Use", 40), fill="#319950")
     def prev_voice(e):
         voice_index[0] = (voice_index[0]-1) % len(voices)
         canvas.itemconfig(voice_text, text=voices[voice_index[0]].name)
@@ -1402,14 +1428,15 @@ def settings(canvas, canvas_img):
         refreshwake()
     refreshwake()
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
-    canvas.create_text(353, 233, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
-    canvas.create_text(350, 230, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
-    speedshdw = canvas.create_text(353, 298, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
-    speedtext = canvas.create_text(350, 295, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
-    minussshdw = canvas.create_text(263, 298, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
-    minusbtn = canvas.create_text(260, 295, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
-    plusshdw = canvas.create_text(443, 298, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
-    plusbtn = canvas.create_text(440, 295, text="+", font=("Necosmic Personal Use", 24), fill="#319950")
+    canvas.create_text(353, 228, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
+    canvas.create_text(350, 225, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
+    rounded_rect(canvas, 231, 207, 470, 290, r=9, color="#319950", width=3)
+    speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
+    speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
+    minussshdw = canvas.create_text(263, 273, text="-", font=('Necosmic Personal Use', 24), fill="#0a2e18")
+    minusbtn = canvas.create_text(260, 270, text="-", font=("Necosmic Personal Use", 24), fill="#319950")
+    plusshdw = canvas.create_text(443, 273, text="+", font=("Necosmic Personal Use", 24),fill="#0a2e18" )
+    plusbtn = canvas.create_text(440, 270, text="+", font=("Necosmic Personal Use", 24), fill="#319950")
     def updatespeedtext():
         canvas.itemconfig(speedtext, text=str(tts_rate[0]))
         canvas.itemconfig(speedshdw, text=str(tts_rate[0]))
@@ -1473,9 +1500,9 @@ def settings(canvas, canvas_img):
                 print("test voice error:", e)
                 speak("Voice test failed")
         threading.Thread(target=run, daemon=True).start()
-    testrec = rounded_rect(canvas, 245, 350, 455, 390, r=9, color="#319950", width=3)
-    testshdw = canvas.create_text(353, 375, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
-    testbtn = canvas.create_text(350, 372, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
+    testrec = rounded_rect(canvas, 245, 415, 455, 455, r=9, color="#319950", width=3)
+    testshdw = canvas.create_text(353, 440, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    testbtn = canvas.create_text(350, 437, text="Test Voice", font=("Necosmic Personal Use", 18), fill="#319950")
     def recolortest(items, color):
         for item in items:
             kind = canvas.type(item)
