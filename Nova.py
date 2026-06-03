@@ -81,12 +81,13 @@ OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
 client = OpenAI(api_key=AIkey,base_url="https://ai.hackclub.com/proxy/v1")
-COMMAND_MODEL = "openai/gpt-4.1"
-VISION_MODEL = "openai/gpt-4.1"
+COMMAND_MODEL = "qwen/qwen2.5-vl-72b-instruct"
+VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
 Respond ONLY with a valid JSON object.
 The user will give you a natural language command.
 Respond ONLY with a JSON object, no explanation, no markdown, nothing else.
+MUST BE VALID JSON, AND ALWAYS FOLLOW THE USER'S REQUEST!
 Format:
 {"actions": [{"action": "action_name", "value": "optional_value"}, ...]}
 Available actions:
@@ -196,6 +197,7 @@ Retry the same action with improved precision.
 Do not re-plan unless explicitly instructed.
 You will receive success/failure signals from the executor.
 REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
+If the user asks to solve something on the screen, or a task in general, use the agent_task (value: goal) feature. This is for multiple tasks btw. If your unsure, just ask the user if they want the answers or the task completed or smth.
 """
 SETTINGSFILE = "nova_settings.json"
 def savesettings():
@@ -289,8 +291,8 @@ def findtextscreen(target_text, monitor_text=""):
         bbox, found_text = best
         top_left = bbox[0]
         bottom_right = bbox[2]
-        x = int(round((top_left[0] + bottom_right[0]) / 2)) / 2.0 + offset_x
-        y = int(round((top_left[1] + bottom_right[1]) / 2)) / 2.0 + offset_y
+        x = int((top_left[0] * 0.6 + bottom_right[0] * 0.4)) / 2.0 + offset_x
+        y = int((top_left[1] * 0.6 + bottom_right[1] * 0.4)) / 2.0 + offset_y
         print(f"Matched: {found_text} ({best_score}) at {x}, {y}")
         return x, y
     return None
@@ -300,6 +302,17 @@ def get_voices():
     return engine.getProperty("voices")
 for i, voice in enumerate(get_voices()):
     print(i, voice.name)
+def refine_click(ss, x, y):
+    import numpy as np
+    img = np.array(ss)
+    patch = img[y-10:y+10, x-10:x+10]
+    gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
+    coords = cv2.findNonZero((gray < 200).astype(np.uint8))
+    if coords is not None:
+        cx = int(np.mean(coords[:,0,0])) + x - 10
+        cy = int(np.mean(coords[:,0,1])) + y - 10
+        return cx, cy
+    return x, y
 def find_all_text(target_text, monitor_text=""):
     ss, offset_x, offset_y = screenshot_monitor(monitor_text)
     img = np.array(ss)
@@ -322,7 +335,7 @@ def find_all_text(target_text, monitor_text=""):
             x = int(round((top_left[0] + bottom_right[0]) / 2)) / 2.0 + offset_x
             y = int(round((top_left[1] + bottom_right[1]) / 2)) / 2.0 + offset_y
             matches.append((score, int(x), int(y), text))
-    matches.sort(key=lambda x: x[2])
+    matches.sort(key=lambda x: x[0], reverse=True)
     return matches
 def parse_index(value):
     words = value.lower()
@@ -359,10 +372,12 @@ def run_agent_task(goal, max_steps=25):
 Previous actions taken:
 {history}
 When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
+ALWAYS MAKE SURE YOU COMLETED THE TASK BEFORE MOVING ONTO THE NEXT ONE, DON'T MESS THIS UP.
+If your not sure where to click, just click the text next to the button, or something like that... Just make sure you actually click it.
 MAKE SURE YOU ACTUALLY CLICK THE BUTTON, OR THE ASKED THING.
 Look at the current screen and decide the NEXT SINGLE ACTION to take.
 IMPORTANT: Respond with ONLY valid JSON, no other text.
-Use ONLY these actions: screen_click, screen_double_click, screen_right_click, type_text, press_key, scroll_mouse, wait, move_mouse
+Use ONLY these actions: screen_click, screen_double_click, screen_right_click, type_text, press_key, scroll_mouse, wait, move_mouse, read_screen
 RESPONSE FORMAT - must be valid JSON:
 If task is complete: {{"done": true}}
 If not complete, pick ONE action: {{"done": false, "action": "screen_click", "value": "description of what to click"}}
@@ -373,6 +388,9 @@ Examples:
 - Scroll: {{"done": false, "action": "scroll_mouse", "value": -5}}
 Remember: ONLY return JSON, pick ONE action per response.
 REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
+MUST BE VALID JSON, AND ALWAYS FOLLOW THE USER'S REQUEST!
+If something doesn't work, don't keep trying it. Try something else that you think will work. 
+Don't say the answers to everything before doing something, just do the actions and say it with the action.
         """
         try:
             response = client.chat.completions.create(
@@ -380,6 +398,13 @@ REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
                 messages=[{
                         "role": "user",
                         "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=500)
+            content = response.choices[0].message.content
+            print("RAW RESPONSE:")
+            print(content)
+            if content is None:
+                print(response)
+                raise Exception("Model returned no content")
+            data = json.loads(content)
             data = json.loads(response.choices[0].message.content)
             print(f"Step {step+1}: {data}")
             if data.get('done'):
@@ -392,7 +417,8 @@ REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
                 if action_value is not None:
                     action["value"] = action_value
                 exectuteactions([action], user_text=goal)
-                history.append(f"Step {step+1}: {action_name} -> {action_value}")
+                result = exectuteactions([action], user_text=goal)
+                history.append(f"Step {step+1}: {action_name} -> {result}")
             time.sleep(1.5)
         except Exception as e:
             print(f"Error in agent task step {step+1}: {e}")
@@ -547,6 +573,7 @@ def findscreentarget(target_description, monitor_text=""):
     prompt = f"""
 TARGET OBJECT:
 "{target_description}"
+MUST BE VALID JSON, AND ALWAYS FOLLOW THE USER'S REQUEST!
 When clicking login or those types of buttons, make sure to click that, not like the login box, unless otherwise stated by the user.
 IMPORTANT: If there are multiple instances of this text on screen:
 - Identify the one that is a CLICKABLE BUTTON or UI element
@@ -573,12 +600,14 @@ Rules:
 - If unclear return found:false
 - when the user says click sign in or something, make sure to click the actual button, not some random thing. 
 - CLICK INSDE THE OBJECT BUTTON OR WHATEVER, MAKE SURE ITS THE CENTER, BECAUSE IF NOT, IT WON'T PROPERLY WORK. DONT CLICK THE EDGES, ONLY CENTER!!!
+- If your not sure where to click, just click the text next to the button, or something like that... Just make sure you actually click it.
 - the user may take shortcuts when saying stuff, so use the info the user gave to do corresponding things. Like if user says click the rsm button, but u can see RSM portal, use the info and click RSM portal. Follow this with other directions.
 - DONT CLICK ON THE OUTLINES OF BUTTONS AND BOXES, ALWAYS INSIDE THEM.
 - DONT CLICK RANDOM BUTTONS, MAKE SURE TO CLICK THE RIGHT ONE, AND DIRECTLY ON IT, NOT THE SIDE. MAKE SURE OF THIS. EXMPL: LIKE ON A TEXT INPUT BOX, CLICK IN THE MIDDLE, NOT ON THE SIDES BECAUSE IT MAY NOT WORK SOMETIMES.
 MAKE SURE TO GO ALL THE WAY IN THE OBJECT, LIKE THE DEAD CENTER. Like if the user says, "Click on the Forza Horizon 6 video," you dont click on the text, but the actual video. Make sure to follow this rule with other things too.
 When clicking something in a checklist, or smth related to that, make sure to click the circle corresponding to the answer or whatever.
 When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
+ALWAYS CLICK THE THING THAT MAKES THE MOST SENSE.
 """
     response = client.chat.completions.create(
         model=VISION_MODEL,
@@ -753,6 +782,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     print(f"Selected match #{index}: {text}")
                 before = screenshot_monitor(user_text)[0]
                 move_mouse_exact(x, y, duration=0.5)
+                x, y = refine_click(ss, x, y)
                 click_mouse_exact(x, y)
                 time.sleep(0.5)
                 after = screenshot_monitor(user_text)[0]
@@ -761,6 +791,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                 if diff < 1.0:
                     print("CLICK FAILED → retry once")
                     move_mouse_exact(x, y, duration=0.3)
+                    x, y = refine_click(ss, x, y)
                     click_mouse_exact(x, y)
             elif action == "screen_double_click":
                 target = value
@@ -774,6 +805,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     continue
                 x, y = coords
                 move_mouse_exact(x, y, duration=0.3)
+                x, y = refine_click(ss, x, y)
                 double_click_mouse_exact(x, y)
             elif action == 'wait':
                 time.sleep(float(value))
@@ -787,6 +819,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     continue
                 x, y = coords
                 move_mouse_exact(x, y, duration=0.3)
+                x, y = refine_click(ss, x, y)
                 click_mouse_exact(x, y, button="right")
             elif action == "move_mouse":
                 if isinstance(value, dict):
@@ -821,7 +854,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "double_click_mouse":
                 pyautogui.doubleClick()
             elif action == 'scroll_mouse':
-                pyautogui.scroll(int(value)*100)
+                pyautogui.scroll(int(value)*69)
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":

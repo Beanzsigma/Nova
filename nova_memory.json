@@ -2,43 +2,43 @@
     "conversation": [
         {
             "role": "user",
-            "content": "solve the first 3 prolbems on the test"
+            "content": "hi"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! How can I assist you today?\"}]}"
         },
         {
             "role": "user",
-            "content": "solve first 3 probs"
+            "content": "solve the first problem on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem on test.\"}]}"
         },
         {
             "role": "user",
-            "content": "solve the first 3 problems on the test"
+            "content": "scroll down"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems on this test\"}]}"
+            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":-100}]}"
         },
         {
             "role": "user",
-            "content": "solve the first 3 problem"
+            "content": "scroll dwon"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the first 3 problems\"}]}"
+            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":-100}]}"
         },
         {
             "role": "user",
-            "content": "solve the problem type the answer in and click ok"
+            "content": "solve the first 3 questions on this test"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve the problem\"}, {\"action\":\"screen_click\",\"value\":\"answer box\"}, {\"action\":\"type_text\",\"value\":\"[ANSWER]\"}, {\"action\":\"screen_click\",\"value\":\"OK button\"}]}"
+            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve first three questions on test.\"}]}"
         }
     ],
     "facts": []
