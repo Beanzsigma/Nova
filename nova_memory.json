@@ -2,35 +2,27 @@
     "conversation": [
         {
             "role": "user",
-            "content": "solve problem 3"
+            "content": "ye whats my screen about like summary"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem number three.\"}]}"
+            "content": "{\"actions\":[{\"action\":\"read_screen\"}]}"
         },
         {
             "role": "user",
-            "content": "solve rpoblem 3"
+            "content": "whats my other screen about"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem three.\"}]}"
+            "content": "{\n  \"actions\": [\n    {\n      \"action\": \"read_screen\",\n      \"value\": \"other screen content\"\n    }\n  ]\n}"
         },
         {
             "role": "user",
-            "content": "scroll to problem 3"
+            "content": "nice"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"scroll_mouse\",\"value\":300}, {\"action\":\"screen_click\", \"value\":\"Problem three\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "solve problem 3"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"agent_task\",\"value\":\"Solve problem three.\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Glad you're enjoying it.\"}]}"
         },
         {
             "role": "user",
@@ -38,7 +30,15 @@
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! How can I assist you?\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hey there, ready to help you!\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "hello"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! What can I do for you?\"}]}"
         }
     ],
     "facts": []

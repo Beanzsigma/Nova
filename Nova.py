@@ -78,18 +78,19 @@ from dotenv import load_dotenv
 load_dotenv()
 reader = easyocr.Reader(['en'])
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-AIkey = os.environ.get("HACKCLUB_AI_KEY")
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
 def get_client():
-    key = api_key[0].strip() or os.environ.get("HACKCLUB_AI_KEY", "").strip()
+    key = api_key[0].strip()
     if not key:
-        raise ValueError('Missing Hack Club API key')
-    if client_cache['client'] is None or client_cache['key'] !=key:
-        client_cache['key'] = key
-        client_cache['client'] = OpenAI(api_key=key, base_url="https://ai.hackclub.com/proxy/v1")
-    return client_cache['client']
+        raise ValueError("Missing Hack Club API key. Add it in settings.")
+    if client_cache["client"] is None or client_cache["key"] != key:
+        client_cache["key"] = key
+        client_cache["client"] = OpenAI(
+            api_key=key,
+            base_url="https://ai.hackclub.com/proxy/v1" )
+    return client_cache["client"]
 COMMAND_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
@@ -207,9 +208,13 @@ Do not re-plan unless explicitly instructed.
 You will receive success/failure signals from the executor.
 REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
 If the user asks to solve something on the screen, or a task in general, use the agent_task (value: goal) feature. This is for multiple tasks btw. If your unsure, just ask the user if they want the answers or the task completed or smth.
-FOR SMALL SCROLLS: scroll 60 
+FOR SMALL SCROLLS: scroll 60
+IF A USER ASKS A FOLLOW UP QUESTION(S), MAKE SURE TO ANSWER AND NOT GIVE UNKNOWN. 
+Also, when a user asks for a screen summary and stuff like that, make sure to use read_screen, and don't go over 8 words.
 """
-SETTINGSFILE = "nova_settings.json"
+APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "Nova")
+os.makedirs(APPDATA_DIR, exist_ok=True)
+SETTINGSFILE = os.path.join(APPDATA_DIR, "nova_settings.json")
 def savesettings():
     data = {"voiceenabled": voiceenabled[0],
         "wakewordenabled": wakewordenabled[0],
@@ -272,6 +277,7 @@ def askgroq(user_text):
         return json.loads(raw)
     except Exception as e:
         print("Both APIs sold:", e)
+        speak("Make sure the Hack Club API key is inserted, or check if Hack AI is down.")
         return {"actions": [{ "action": "speak_response","value": "AI systems unavailable"}]}
 def ask_openrouter(messages):
     headers = {
@@ -1359,11 +1365,35 @@ def settings(canvas, canvas_img):
     voicecheck = canvas.create_rectangle(148, 122, 168, 142,outline='#319950',width=2,fill="black",stipple="gray12")
     voicebtnshdw = canvas.create_text(161, 135,text="✓",font=("Arial", 14),fill="#0a2e18")
     voicebtn = canvas.create_text(158, 132,text="✓",font=("Arial", 14),fill="#319950")
-    canvas.create_text(353, 333, text='Hack Club API Key', font=("Necosmic Personal Use", 18), fill="#0a2e18")
-    canvas.create_text(350, 330, text="Hack Club API Key", font=("Necosmic Personal Use", 18), fill="#319950")
+    canvas.create_text(353, 316, text='Hack Club API Key', font=("Necosmic Personal Use", 18), fill="#0a2e18")
+    canvas.create_text(350, 313, text="Hack Club API Key", font=("Necosmic Personal Use", 18), fill="#319950")
     apikey_input = ctk.CTkEntry(app, width= 360, height=35, fg_color="black", border_color="#319950", text_color="#319950", show="*")
-
-
+    apikey_input.insert(0, api_key[0])
+    api_key_window = canvas.create_window(350, 354, window=apikey_input, anchor='center')
+    savekeyshdw = canvas.create_text(353, 388, text="Save API Key", font=("Necosmic Personal Use", 17), fill="#0a2e18")
+    savekeybtn = canvas.create_text(350, 385, text="Save API Key", font=("Necosmic Personal Use", 17), fill="#319950")
+    def leaveapi(e):
+        canvas.itemconfig(savekeybtn, fill="#0F4423")
+        canvas.itemconfig(savekeyshdw, fill="#0E0D0D")
+    def enterapi(e):
+        canvas.itemconfig(savekeybtn, fill="#319950")
+        canvas.itemconfig(savekeyshdw, fill="#0a2e18")
+    def save_api_key(e=None):
+        api_key[0] = apikey_input.get().strip()
+        client_cache["client"] = None
+        client_cache["key"] = None
+        savesettings()
+        print("Saved API key to:", SETTINGSFILE)
+        print("Key saved?", bool(api_key[0]))
+        speak("Saved")
+    rounded_rect(canvas, 161, 300, 536, 404, r=9, color="#319950", width=3)
+    canvas.tag_bind(savekeybtn, "<Button-1>", save_api_key)
+    canvas.tag_bind(savekeyshdw, "<Button-1>", save_api_key)
+    canvas.tag_bind(savekeybtn, "<Enter>", leaveapi)
+    canvas.tag_bind(savekeyshdw, "<Enter>", leaveapi)
+    canvas.tag_bind(savekeyshdw, "<Leave>", enterapi)
+    canvas.tag_bind(savekeybtn, "<Leave>", enterapi)
+    apikey_input.bind("<Return>", save_api_key)
     state = "normal" if voiceenabled[0] else "hidden"
     canvas.itemconfig(voicebtn, state=state)
     canvas.itemconfig(voicebtnshdw, state=state)
