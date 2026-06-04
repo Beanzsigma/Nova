@@ -277,8 +277,19 @@ def compute_confidence(prob, text, target):
     return (
         c_ocr * 0.55 +
         text_sim * 0.35 +
-        length_sim * 0.10
-    )
+        length_sim * 0.10)
+def getanswerfullvoice(user_text):
+    try:
+        response = get_client().chat.completions.create(
+            model=COMMAND_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Give a natural spoken answer. Keep it concise, but do not use the 8 word limit. No markdown."}, {"role": "user","content": user_text}],max_tokens=250)
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print("full voice answer error:", e)
+        return "I could not get the full answer."
 def askgroq(user_text):
     try:
         add_to_conversation('user', user_text)
@@ -1112,9 +1123,12 @@ def run_ai_command_with_gif(commandtext):
     try:
         parsed = askgroq(commandtext)
         actions = parsed.get("actions", [])
-        if not actions or actions[0].get("action") == "unknown":
-            print("Blocked invalid response")
-            return
+        if actions and actions[0].get("action") == "speak_response":
+            value = str(actions[0].get("value", "")).lower()
+            if "answer too long" in value or "full answer" in value:
+                full = getanswerfullvoice(commandtext)
+                speak(full)
+                return
         exectuteactions(actions, user_text=commandtext)
     finally:
         stop_loading_from_thread(close_loading)
@@ -1437,6 +1451,7 @@ def settings(canvas, canvas_img):
         print("Saved API key to:", SETTINGSFILE)
         print("Key saved?", bool(api_key[0]))
         speak("Saved")
+    rounded_rect(canvas, 164, 303, 539, 407, r=9, color="#0a2e18", width=3)
     rounded_rect(canvas, 161, 300, 536, 404, r=9, color="#319950", width=3)
     canvas.tag_bind(savekeybtn, "<Button-1>", save_api_key)
     canvas.tag_bind(savekeyshdw, "<Button-1>", save_api_key)
@@ -1513,6 +1528,7 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(wake_items, "<Button-1>", togglewake)
     canvas.create_text(353, 228, text="Voice Speed", font=("Necosmic Personal Use", 20), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 225, text='Voice Speed', font=('Necosmic Personal Use', 20), fill="#319950", anchor='center')
+    rounded_rect(canvas, 234, 210, 473, 293, r=9, color="#0a2e18", width=3)
     rounded_rect(canvas, 231, 207, 470, 290, r=9, color="#319950", width=3)
     speedshdw = canvas.create_text(353, 273, text=str(tts_rate[0]), font=("Press Start 2P", 16), fill="#0a2e18", width = 90)
     speedtext = canvas.create_text(350, 270, text=str(tts_rate[0]), font=('Press Start 2P', 16), fill="#319950", width=90)
@@ -1616,8 +1632,8 @@ def settings(canvas, canvas_img):
     canvas.tag_bind(voicecheck, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtn, "<Button-1>", togglebutton)
     canvas.tag_bind(voicebtnshdw, "<Button-1>", togglebutton)
-    backbtnshdw = canvas.create_text(73, 55, text="Return", font=("Necosmic Personal Use", 18), fill="#0a2e18")
-    backbtn = canvas.create_text(70, 52, text="Return", font=('Necosmic Personal Use', 18), fill="#319950")
+    backbtnshdw = canvas.create_text(53, 35, text="←", font=("Necosmic Personal Use", 40), fill="#0a2e18")
+    backbtn = canvas.create_text(50, 32, text="←", font=('Necosmic Personal Use', 40), fill="#319950")
     def backenter(e):
         canvas.itemconfig(backbtn, fill="#0F4423")
         canvas.itemconfig(backbtnshdw, fill="#0E0D0D")
