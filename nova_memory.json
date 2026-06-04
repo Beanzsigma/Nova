@@ -2,27 +2,11 @@
     "conversation": [
         {
             "role": "user",
-            "content": "ye whats my screen about like summary"
+            "content": "hi"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"read_screen\"}]}"
-        },
-        {
-            "role": "user",
-            "content": "whats my other screen about"
-        },
-        {
-            "role": "assistant",
-            "content": "{\n  \"actions\": [\n    {\n      \"action\": \"read_screen\",\n      \"value\": \"other screen content\"\n    }\n  ]\n}"
-        },
-        {
-            "role": "user",
-            "content": "nice"
-        },
-        {
-            "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Glad you're enjoying it.\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Greeting acknowledged well noted.\"}]}"
         },
         {
             "role": "user",
@@ -30,16 +14,44 @@
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hey there, ready to help you!\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! What assistance do you need?\"}]}"
         },
         {
             "role": "user",
-            "content": "hello"
+            "content": "hii"
         },
         {
             "role": "assistant",
-            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hello! What can I do for you?\"}]}"
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Greeted you twice, how by?\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "hi"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Hey! Twice now, what's up?\"}]}"
+        },
+        {
+            "role": "user",
+            "content": "wht does sigma boy mean"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"actions\":[{\"action\":\"speak_response\",\"value\":\"Sigma boy refers leading masculinity.\"}]}"
         }
     ],
-    "facts": []
+    "facts": [],
+    "history": [
+        {
+            "user": "hi",
+            "summary": "speak_response: Hey! Twice now, what's u",
+            "time": 1780533885
+        },
+        {
+            "user": "wht does sigma boy mean",
+            "summary": "speak_response: Sigma boy refers leading",
+            "time": 1780533897
+        }
+    ]
 }

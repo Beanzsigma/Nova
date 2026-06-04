@@ -1,16 +1,23 @@
 import json
 from difflib import SequenceMatcher
 import requests
+import time
+import os
 memoryenabled = [True]
-memoryfile = "nova_memory.json"
-memory = {"conversation": [], "facts": []}
+APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "Nova")
+os.makedirs(APPDATA_DIR, exist_ok=True)
+memoryfile = os.path.join(APPDATA_DIR, "nova_memory.json")
+memory = {"conversation": [], "facts": [], "history": []}
 api_key = [""]
 client_cache = {'key': None, 'client': None}
 def load_memory():
     global memory
     try:
-        with open(memoryfile, "r") as f: 
+        with open(memoryfile, "r") as f:
             memory = json.load(f)
+        memory.setdefault("conversation", [])
+        memory.setdefault("facts", [])
+        memory.setdefault("history", [])
     except:
         savememory()
 def savememory():
@@ -36,6 +43,19 @@ def add_fact(fact):
     if fact not in memory['facts']:
             memory['facts'].append(fact)
     memory['facts'] = memory['facts'][-25:]
+    savememory()
+def add_history(user_text, actions):
+    labels = []
+    for a in actions[:3]:
+        action = a.get("action", 'unknown')
+        value = a.get('value', "")
+        if value:
+            labels.append(f"{action}: {str(value)[:24]}")
+        else:
+            labels.append(action)
+    summary = ", ".join(labels) if labels else "unknown"
+    memory["history"].append({"user": user_text,"summary": summary,"time": int(time.time())})
+    memory["history"] = memory["history"][-20:]
     savememory()
 import customtkinter as ctk
 import sounddevice as sd
@@ -212,14 +232,14 @@ FOR SMALL SCROLLS: scroll 60
 IF A USER ASKS A FOLLOW UP QUESTION(S), MAKE SURE TO ANSWER AND NOT GIVE UNKNOWN. 
 Also, when a user asks for a screen summary and stuff like that, make sure to use read_screen, and don't go over 8 words.
 """
-APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "Nova")
-os.makedirs(APPDATA_DIR, exist_ok=True)
 SETTINGSFILE = os.path.join(APPDATA_DIR, "nova_settings.json")
 def savesettings():
-    data = {"voiceenabled": voiceenabled[0],
+    data = {
+        "voiceenabled": voiceenabled[0],
         "wakewordenabled": wakewordenabled[0],
         "tts_rate": tts_rate[0],
-        "api_key": api_key[0]}
+        "api_key": api_key[0],
+        "selected_voice": selected_voice[0]}
     with open(SETTINGSFILE, "w") as f:
         json.dump(data, f, indent=4)
 def loadsettings():
@@ -230,6 +250,7 @@ def loadsettings():
         wakewordenabled[0] = data.get("wakewordenabled", True)
         tts_rate[0] = max(1, min(100, int(data.get("tts_rate", 50))))
         api_key[0] = data.get("api_key", "")
+        selected_voice[0] = data.get("selected_voice", None)
     except:
         savesettings()
 def ask_for_api_key_if_missing():
@@ -274,7 +295,9 @@ def askgroq(user_text):
             raw = ask_openrouter(messages)
         print(f"AI: {raw}")
         add_to_conversation('assistant', raw)
-        return json.loads(raw)
+        parsed = json.loads(raw)
+        add_history(user_text, parsed.get("actions", []))
+        return parsed
     except Exception as e:
         print("Both APIs sold:", e)
         speak("Make sure the Hack Club API key is inserted, or check if Hack AI is down.")
@@ -1101,6 +1124,7 @@ def main(canvas, canvas_img):
     voiceresult = [None]
     textresult = [None]
     fullanswerready = [False]
+    history_items = []
     def getfullanswer(result):
         def run():
             response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
@@ -1210,6 +1234,7 @@ def main(canvas, canvas_img):
                 try:
                     parsed = askgroq(result)
                     actions = parsed.get("actions", [])
+                    app.after(0, gethistory)
                     if actions and actions[0].get("action") == "unknown":
                         actions = [{"action": "speak_response","value": "I didn't understand that command"}]
                         app.after(0, lambda: canvas.itemconfig(lefresponse, text="I don't understand"))
@@ -1251,6 +1276,7 @@ def main(canvas, canvas_img):
                 try:
                     parsed = askgroq(text)
                     actions = parsed.get("actions", [])
+                    app.after(0, gethistory)
                     def update_ui(t):
                         app.after(0, lambda: canvas.itemconfig(responsetext, text=t))
                         app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=t))
@@ -1278,7 +1304,7 @@ def main(canvas, canvas_img):
     canvas.create_text(690, 10, text="Your PC", font=('Necosmic Personal Use', 17), fill="#319950", anchor="ne")
     canvas.create_text(355, 54, text="Nova", font=('Necosmic Personal Use', 38), fill="#0a2e18", anchor='center')
     canvas.create_text(350, 50, text="Nova", font=('Necosmic Personal Use', 38), fill="#319950", anchor='center')
-    canvas.create_text(518, 486, text="Crafted by sigi boi", font=('Press Start 2P', 7), fill="#319950", anchor='nw')
+    canvas.create_text(528, 486, text="Built by sigi boi", font=('Press Start 2P', 7), fill="#319950", anchor='nw')
     canvas.create_text(69, 126, text="Say nova!", font=("Press Start 2P", 6), fill='#0a2e18', anchor='center')
     canvas.create_text(67, 124, text="Say nova!", font=("Press Start 2P", 6), fill="#319950", anchor="center")
     rounded_rect(canvas, 13, 308, 203, 478, r=9, color="#0a2e18", width=3)
@@ -1297,6 +1323,31 @@ def main(canvas, canvas_img):
     canvas.create_text(175, 100, text="Voice Input", font=("Necosmic Personal Use", 16), fill="#319950", anchor='center')
     canvas.create_text(525, 103, text="Text Input", font=('Necosmic Personal Use', 16), fill="#0a2e18", anchor='center')
     canvas.create_text(523, 100, text="Text Input", font=('Necosmic Personal Use', 16), fill="#319950", anchor="center")
+    def gethistory():
+        for item in history_items:
+            try:
+                canvas.delete(item)
+            except:
+                pass
+        history_items.clear()
+        recent = memory.get('history', [])[-3:]
+        if not recent:
+            history_items.append(canvas.create_text(
+                105, 385,
+                text="No history yet, try\n something out!",
+                font=("Press Start 2P", 7),
+                fill="#319950",
+                anchor='center',
+                width=160))
+            return
+        y = 350
+        for item in reversed(recent):
+            user = item.get('user', "")[:20]
+            summary = item.get('summary', "")[:22]
+            history_items.append(canvas.create_text(22, y,text=f"-{user}",font=("Press Start 2P", 6),fill="#319950",anchor='nw',width=165))
+            history_items.append(canvas.create_text(22, y + 17,text=summary,font=("Press Start 2P", 5),fill="#1f7f3b",anchor='nw',width=165 ))
+            y += 36
+    gethistory()
     settingsbtnshdw = canvas.create_text(473, 55, text="⚙", font=("Arial", 24), fill="#0a2e18")
     settingsbtn = canvas.create_text(470, 52, text="⚙", font=("Arial", 24), fill='#319950')
     def settingent(e):
@@ -1407,6 +1458,8 @@ def settings(canvas, canvas_img):
     wakelabel = canvas.create_text(382, 180, text="Wake Word Detection", font=("Necosmic Personal Use", 20), fill="#319950", anchor='center', tags=wake_items)
     voice_textshdw = canvas.create_text(353, 483, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#0a2e18")
     voice_text = canvas.create_text(350, 480, text=voices[voice_index[0]].name, font=("Press Start 2P", 8), fill="#319950")
+    canvas.create_text(79, 353, text="Your data\n is safe :)", font=("Necosmic Personal Use", 14), fill="#0a2e18", anchor='center')
+    canvas.create_text(76, 350, text="Your data\n is safe :)", font=("Necosmic Personal Use", 14), fill="#319950", anchor='center', tags=wake_items)
     def next_voice(e):
         voice_index[0] = (voice_index[0]+1) % len(voices)
         canvas.itemconfig(voice_text, text=voices[voice_index[0]].name)
