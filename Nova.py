@@ -207,10 +207,9 @@ Never respond with screen description or speak_response unless explicitly asked.
 ALSO WHEN SEARCHING STUFF AND THINGS LIKE THAT WHERE THE USER ASKS YOU TO SEARCH SOMETHING UP BY CLICKING THE SEARCH BAR, MAKE SURE TO PRESS ENTER WHEN YOUR DONE.
 - GOOGLE SEARCH BAR IS Ask Google or Type a URL and Opera GX search bar is Enter search or web address. So use this when the user asks to click the search bar or something.
 NEVER GO OVER 8 WORDS, AND IF YOU THINK IT'S NOT POSSIBLE TO FIT THE ANSWER IN 8 WORDS, SAY ANSWER TOO LONG, PRESS FULL ANSWER. DON"T COMBINE WORDS WITH SLASHES AND STUFF LIKE THAT, IF YOU HAVE TO, JUST SAY ANSWER TOO LONG, PRESS FULL ANSWER.
-Only use unknown when the input is meaningless, unintelligible,
 or unrelated to both conversation and desktop control.
 For greetings, thanks, small talk, and normal questions,
-use speak_response.
+scm-history-item:c%3A%5CUsers%5Cnisha%5COneDrive%5CDesktop%5CHACKCLUB%5CNova?%7B%22repositoryId%22%3A%22scm0%22%2C%22historyItemId%22%3A%22557648a7259633cb5aab231d4df6ba4cbe535ac0%22%2C%22historyItemParentId%22%3A%220f272187be5290c3acb43d7c408ad00f32552c74%22%2C%22historyItemDisplayId%22%3A%22557648a%22%7Duse speak_response.
 If the user input is conversational (greetings, thanks, small talk, etc.)
 do not return unknown.
 Use speak_response with a short natural response.
@@ -231,6 +230,8 @@ If the user asks to solve something on the screen, or a task in general, use the
 FOR SMALL SCROLLS: scroll 60
 IF A USER ASKS A FOLLOW UP QUESTION(S), MAKE SURE TO ANSWER AND NOT GIVE UNKNOWN. 
 Also, when a user asks for a screen summary and stuff like that, make sure to use read_screen, and don't go over 8 words.
+Make sure to answer the user's question everytime, even if it is pretty stupid, and sounds weird. 
+NEVER GIVE UNKNOWN EVEN IF IT IS STUPID OR SOMETHING LIKE THAT, ALWAYS RESPOND UNLESS FULLY NEEDED!
 """
 SETTINGSFILE = os.path.join(APPDATA_DIR, "nova_settings.json")
 def savesettings():
@@ -1348,19 +1349,20 @@ def main(canvas, canvas_img):
         if not recent:
             history_items.append(canvas.create_text(
                 105, 385,
-                text="No history yet, try\n something out!",
+                text="No history yet, try\nsomething out!",
                 font=("Press Start 2P", 7),
                 fill="#319950",
                 anchor='center',
                 width=160))
             return
-        y = 350
+        recent = memory.get('history', [])[-3:]
+        y = 345
         for item in reversed(recent):
             user = item.get('user', "")[:20]
             summary = item.get('summary', "")[:22]
             history_items.append(canvas.create_text(22, y,text=f"-{user}",font=("Press Start 2P", 6),fill="#319950",anchor='nw',width=165))
-            history_items.append(canvas.create_text(22, y + 17,text=summary,font=("Press Start 2P", 5),fill="#1f7f3b",anchor='nw',width=165 ))
-            y += 36
+            history_items.append(canvas.create_text(22, y + 19,text=summary,font=("Press Start 2P", 5),fill="#1f7f3b",anchor='nw',width=165 ))
+            y += 43
     gethistory()
     settingsbtnshdw = canvas.create_text(473, 55, text="⚙", font=("Arial", 24), fill="#0a2e18")
     settingsbtn = canvas.create_text(470, 52, text="⚙", font=("Arial", 24), fill='#319950')
@@ -1424,6 +1426,25 @@ def settings(canvas, canvas_img):
                 voice_index[0] = i
                 break
     clear(canvas, canvas_img)
+    clearhistshdw = canvas.create_text(679, 33, text="🗑️ ", font=("Necosmic Personal Use", 24), fill="#0a2e18")
+    clearhistbtn = canvas.create_text(676, 30, text="🗑️ ", font=("Necosmic Personal Use", 24), fill="#319950")
+    def clear_history(e=None):
+            memory["history"]=[]
+            savememory()
+            speak("History cleared")
+            print("History cleared")
+    def clearhist_enter(e):
+        canvas.itemconfig(clearhistbtn, fill="#0F4423")
+        canvas.itemconfig(clearhistshdw, fill="#0E0D0D")
+    def clearhist_leave(e):
+        canvas.itemconfig(clearhistshdw, fill="#0a2e18")
+        canvas.itemconfig(clearhistbtn, fill="#319950")
+    canvas.tag_bind(clearhistbtn, "<Button-1>", clear_history)
+    canvas.tag_bind(clearhistshdw, "<Button-1>", clear_history)
+    canvas.tag_bind(clearhistbtn, "<Leave>", clearhist_leave)
+    canvas.tag_bind(clearhistshdw, "<Leave>",  clearhist_leave)
+    canvas.tag_bind(clearhistbtn, "<Enter>", clearhist_enter)
+    canvas.tag_bind(clearhistshdw, "<Enter>", clearhist_enter)
     canvas.create_text(353, 63, text="Settings", font=("Necosmic Personal Use", 38), fill="#0a2e18")
     canvas.create_text(350, 60, text="Settings", font=('Necosmic Personal Use', 38), fill="#319950")
     voicecheckstate = voiceenabled
