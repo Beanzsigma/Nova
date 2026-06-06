@@ -1,6 +1,7 @@
 import json
 from difflib import SequenceMatcher
 import requests
+from PIL import Image, ImageSequence, ImageTk, ImageEnhance
 import time
 import os
 memoryenabled = [True]
@@ -1330,6 +1331,47 @@ def main(canvas, canvas_img):
     rounded_rect(canvas, 220, 305, 687, 475, r=9, color="#319950")
     canvas.create_text(453, 328, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='center')
     canvas.create_text( 450, 325, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#319950", anchor='center')
+    def makequickicon(path, size=(36, 36)):
+        img = Image.open(getpath(path)).convert("RGBA").resize(size)
+        hover =ImageEnhance.Brightness(img).enhance(0.55)
+        return ImageTk.PhotoImage(img), ImageTk.PhotoImage(hover)
+    def runquickaction(actions, label):
+        close_loading = showaigif(canvas, canvas_img, textinput_window)
+        def update_ui(text):
+            app.after(0, lambda: canvas.itemconfig(responsetext, text=text))
+            app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=text))
+        def run():
+            try:
+                exectuteactions(actions, update_ui, label)
+            except Exception as e:
+                print("quick action error:", e)
+                speak("Action failed")
+            finally:
+                app.after(0, close_loading)
+        threading.Thread(target=run, daemon=True).start()
+    def quick_button(x, y, icon_path, label, actions):
+        normal, hover = makequickicon(icon_path)
+        item = canvas.create_image(x, y, image=normal, anchor='center')
+        textshdw = canvas.create_text(x+2, y+36, text=label, font=("Press Start 2P", 5), fill="#0a2e18", anchor='center')
+        text = canvas.create_text(x, y +34, text=label, font=("Press Start 2P", 5), fill="#319950", anchor='center')
+        canvas._quick_imgs = getattr(canvas, "_quick_imgs", [])
+        canvas._quick_imgs.extend([normal, hover])
+        def enter(e):
+            canvas.itemconfig(item, image=hover)
+            canvas.itemconfig(text, fill="#0F4423")
+        def leave(e):
+            canvas.itemconfig(item, image=normal)
+            canvas.itemconfig(text, fill="#319950")
+        def click(e):
+            runquickaction(actions, label)
+        for tag in (item, text, textshdw):
+            canvas.tag_bind(tag, "<Enter>", enter)
+            canvas.tag_bind(tag, "<Leave>", leave)
+            canvas.tag_bind(tag, "<Button-1>", click)
+    quick_button(285, 380, "Images/GIFS/screenshot.png", "Screenshot", [{"action": "screenshot"}])
+    quick_button(390, 380, "Images/GIFS/mute.png", "Volume", [{'action': "mute_volume"}])
+    quick_button(495, 380, "Images/GIFS/readscreen.png", " Read\nscreen", [{"action": "read_screen"}])
+
     rounded_rect(canvas, 13, 88, 343, 293, r=9, color="#0a2e18")
     rounded_rect(canvas, 10, 85, 340, 290, r=9, color="#319950")
     rounded_rect(canvas, 353, 88, 693, 293, r=9, color="#0a2e18")
