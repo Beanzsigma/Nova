@@ -41,7 +41,7 @@
 
 ## Things to keep in mind
 - Nova is in beta stages and may occasionally make mistakes
-- Nova's context awareness and multi-step features best works on web browsers such as google
+- Nova's context awareness and multi-step features best works on web browsers such as Chrome, Edge, or Opera GX
 - OCR accuracy depends on text size, contrast, and image quality
 - Multi-step actions may take a bit of time to complete as each step requires AI reasoning and screen analysis
 - Some desktop applications use custom UI frameworks that can make text detection more difficult
@@ -61,5 +61,17 @@
 ## Why I built NOVA.
 ### Most desktops assistants can only answer questions or run simple commands, but I wanted to build something that can actually interact with a computer, understand context, and then carry out tasks. 
 
+## Challenges I ran into
+### I ran into a lot of challenges and problems when building this app. At first, I didn't think I could build this, but after hours of watching youtube tutorials, I managed to slowly build new features. I spent the majority of my time tuning the OCR feature, and it still isn't perfect. It got to a point where I had to compute the confidence of the AI, since it was always clicking the wrong buttons, and then filter out the best matches. In addition to that, I spent the rest of the time fixing random bugs that randomly pop up. This entire app has been a huge roller coaster, but in the end, I managed to pull through. 
+
 ## Disclaimer:
 ### Nova is an experimental AI desktop assistant, and because it directly interacts with your desktop, occasional mistakes may occur. Always watch over the AI as it performs tasks. 
+
+## Where AI assistance was used:
+- AI assistance was used to help tune the OCR vision
+- Small amounts of AI was used to help debug/fix parts of the code
+- AI helped with the memory feature
+- AI helped build some parts of the prompts
+#### For the most part, the rest of the application logic, desktop automation, UI development, and system integration were implemented by me. 
+
+## Demo: 
