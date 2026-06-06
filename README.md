@@ -1,4 +1,5 @@
 # NOVA
+
 ### Nova is a Python based Windows app that interprets user requests using an AI model, which can then see what's on your screen, and perform actions autonomously. Using vision models, OCR,  and memory, Nova can open apps, interact with elements on your screen, and complete multi step tasks on your computer. NOTE: Nova still currently is in BETA stage, and there may be many bugs I'm unaware of. 
 
 ## Key features:
@@ -12,9 +13,6 @@
 - **Multi-step actions.** Nova can exectute multi-step actions, like solving a small six quetion quiz. This feature may have some problems, but for the most part, it works decently. NOTE: this feature may be a bit slow due to the AI model. 
 - **Multi-monitor support.** Nova can view a total of two monitors, but features are very limited to this. For the most part, it can view/summarize screens, and click easy to read buttons, text, etc...
 - **Context aware UI interaction.** During multi-step actions, Nova can correct iteself on the go, however, this feature is still being improved upon. 
-
-## Why I built NOVA.
-### Most desktops assistants can only answer questions or run simple commands, but I wanted to build something that can actually interact with a computer, understand context, and then carry out tasks. 
 
 ## Example commands to try:
 - "Open Discord."
@@ -41,5 +39,27 @@
 - Pillow
 - NirCMD
 
+## Things to keep in mind
+- Nova is in beta stages and may occasionally make mistakes
+- Nova's context awareness and multi-step features best works on web browsers such as google
+- OCR accuracy depends on text size, contrast, and image quality
+- Multi-step actions may take a bit of time to complete as each step requires AI reasoning and screen analysis
+- Some desktop applications use custom UI frameworks that can make text detection more difficult
+- Multi-monitor support is currently limited and may not work reliably in every situation.
+- Nova performs best when UI elements are clearly visible and not obstructed
+- Due to response limits, Nova may face some issues regarding AI status, which may interfere with actions/responses. 
+
+## Current limitations
+- Vision models can occasionally misunderstand screen content
+- OCR may confuse similar looking words/symbols
+- Autonomous task completion is currently limited by model reasoning quality and API response speed.
+- UI interactions are best reliable on browser based interfaces than customized desktop applications
+
 ## Current status of NOVA
 ### Nova is still currently in development. I plan to imrpove the vision, context awareness, and overall reliability in the future. 
+
+## Why I built NOVA.
+### Most desktops assistants can only answer questions or run simple commands, but I wanted to build something that can actually interact with a computer, understand context, and then carry out tasks. 
+
+## Disclaimer:
+### Nova is an experimental AI desktop assistant, and because it directly interacts with your desktop, occasional mistakes may occur. Always watch over the AI as it performs tasks. 
