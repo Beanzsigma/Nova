@@ -314,7 +314,7 @@ def askgroq(user_text):
         return parsed
     except Exception as e:
         print("Both APIs sold:", e)
-        speak("Make sure the Hack Club API key is inserted, or check if Hack AI is down.")
+        speak("Make sure the Hack Club API key is inserted, or check if Hack AI is down. It also may be an issue related to the AI.")
         return {"actions": [{ "action": "speak_response","value": "AI systems unavailable"}]}
 def ask_openrouter(messages):
     headers = {
@@ -1202,8 +1202,8 @@ def main(canvas, canvas_img):
     active_ui["canvas"] = canvas
     active_ui["canvas_img"] = canvas_img
     active_ui["textinput_window"] = textinput_window
-    responsetext_shdw = canvas.create_text(523, 175, text="", font=("Press Start 2P", 13), fill="#0a2e18", anchor="n", width=290)
-    responsetext= canvas.create_text(520, 172, text="", font=("Press Start 2P", 13), fill="#319950", anchor="n", width=290)
+    responsetext_shdw = canvas.create_text(517, 175, text="", font=("Press Start 2P", 12), fill="#0a2e18", anchor="n", width=310)
+    responsetext= canvas.create_text(514, 172, text="", font=("Press Start 2P", 12), fill="#319950", anchor="n", width=310)
     leftresponseshdw = canvas.create_text(237, 128, text="", font=('Press Start 2P', 13), fill="#0a2e18", anchor='n', width=220)
     lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
     fullresbutton1shdw = canvas.create_text(244, 259, text="Full Answer", font=('Necosmic Personal use', 12), fill="#0a2e18")
