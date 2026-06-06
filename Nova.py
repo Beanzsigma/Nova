@@ -3,6 +3,7 @@ from difflib import SequenceMatcher
 import requests
 from PIL import Image, ImageSequence, ImageTk, ImageEnhance
 import time
+selected_voice = [""]
 import os
 memoryenabled = [True]
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "Nova")
@@ -359,6 +360,32 @@ def findtextscreen(target_text, monitor_text=""):
         return x, y
     return None
 import pyttsx3
+tts_queue = queue.Queue()
+tts_worker_started = [False]
+def start_tts_worker():
+    if tts_worker_started[0]:
+        return
+    tts_worker_started[0] = True
+    threading.Thread(target=tts_worker, daemon=True).start
+def tts_worker():
+    pythoncom.CoInitialize()
+    engine = pyttsx3.init()
+    try:
+        while True:
+            text = tts_queue.get()
+            try:
+                engine.setProperty("rate", 75 + int(tts_rate[0] * 2))
+                engine.setProperty("volume", 1.0)
+                if selected_voice[0]:
+                    engine.setProperty("voice", selected_voice[0])
+                engine.say(str(text))
+                engine.runAndWait()
+            except Exception as e:
+                print("tts error:", e)
+            finally:
+                tts_queue.task_done()
+    finally:
+        pythoncom.CoUninitialize()
 def get_voices():
     engine = pyttsx3.init()
     return engine.getProperty("voices")
@@ -411,6 +438,8 @@ def parse_index(value):
 def speak(text):
     if not voiceenabled[0]:
         return
+    start_tts_worker()
+    tts_queue.put(str(text))
     def run():
         pythoncom.CoInitialize()
         engine = pyttsx3.init()
@@ -811,6 +840,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == 'agent_task':
                 run_agent_task(value)
             elif action == "speak_response":
+                if hasreadscreen:
+                    continue
                 speak(value)
                 if update_ui:
                     update_ui(value)
@@ -932,10 +963,10 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "press_key":
                 pyautogui.hotkey(*value.split("+"))
             elif action == "lock_pc":
-                subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
+                print("INSIDE LOCK")
+                ctypes.windll.user32.LockWorkStation()
             elif action == "sleep_pc":
-                subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
-                
+                ctypes.windll.powrprof.SetSuspendState(0, 1, 0)
         except Exception as e:
             print(f"errorr {action}: {e}")
 ctk.set_appearance_mode('dark')
@@ -1141,6 +1172,7 @@ def main(canvas, canvas_img):
     textresult = [None]
     fullanswerready = [False]
     history_items = []
+    command_busy = [False]
     def getfullanswer(result):
         def run():
             response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
@@ -1283,6 +1315,9 @@ def main(canvas, canvas_img):
             canvas.itemconfig(rectext, text="Processing...")
             canvas.itemconfig(rectextshdw, text="Processing...")
     def submittext(e):
+        if command_busy[0]:
+            speak("Busy")
+            return
         text = textinput.get().strip().lower()
         if text:
             textresult[0] = text
@@ -1331,47 +1366,75 @@ def main(canvas, canvas_img):
     rounded_rect(canvas, 220, 305, 687, 475, r=9, color="#319950")
     canvas.create_text(453, 328, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#0a2e18", anchor='center')
     canvas.create_text( 450, 325, text="Quick Actions", font=('Necosmic Personal Use', 17), fill="#319950", anchor='center')
-    def makequickicon(path, size=(36, 36)):
+    def makequickicon(path, size=(80, 80)):
         img = Image.open(getpath(path)).convert("RGBA").resize(size)
         hover =ImageEnhance.Brightness(img).enhance(0.55)
         return ImageTk.PhotoImage(img), ImageTk.PhotoImage(hover)
-    def runquickaction(actions, label):
+    def runquickaction(actions, label, prompt=None):
+        if command_busy[0]:
+            speak("Busy")
+            return
+        command_busy[0] = False
+        command_busy[0] = True
         close_loading = showaigif(canvas, canvas_img, textinput_window)
         def update_ui(text):
             app.after(0, lambda: canvas.itemconfig(responsetext, text=text))
             app.after(0, lambda: canvas.itemconfig(responsetext_shdw, text=text))
         def run():
             try:
-                exectuteactions(actions, update_ui, label)
+                exectuteactions(actions, update_ui, prompt or label)
             except Exception as e:
                 print("quick action error:", e)
                 speak("Action failed")
             finally:
+                command_busy[0] = False
                 app.after(0, close_loading)
         threading.Thread(target=run, daemon=True).start()
-    def quick_button(x, y, icon_path, label, actions):
+    def quick_button(x, y, icon_path, label, actions, prompt=None):
         normal, hover = makequickicon(icon_path)
+        is_muted = [False]
+        if label == "Volume":
+            alt_normal, alt_hover = makequickicon("Images/GIFS/unmute.png")
+        else:
+            alt_normal, alt_hover = None, None
         item = canvas.create_image(x, y, image=normal, anchor='center')
-        textshdw = canvas.create_text(x+2, y+36, text=label, font=("Press Start 2P", 5), fill="#0a2e18", anchor='center')
-        text = canvas.create_text(x, y +34, text=label, font=("Press Start 2P", 5), fill="#319950", anchor='center')
+        textshdw = canvas.create_text(x+2, y+65, text=label, font=("Press Start 2P", 8), fill="#0a2e18", anchor='center')
+        text = canvas.create_text(x, y +63, text=label, font=("Press Start 2P", 8), fill="#319950", anchor='center')
         canvas._quick_imgs = getattr(canvas, "_quick_imgs", [])
         canvas._quick_imgs.extend([normal, hover])
+        if label =="Volume":
+            canvas._quick_imgs.extend([alt_normal, alt_hover])
         def enter(e):
-            canvas.itemconfig(item, image=hover)
+            if label == "Volume" and is_muted[0]:
+                canvas.itemconfig(item, image=alt_hover)
+            else:
+                canvas.itemconfig(item, image=hover)
             canvas.itemconfig(text, fill="#0F4423")
         def leave(e):
-            canvas.itemconfig(item, image=normal)
+            if label== "Volume" and is_muted[0]:
+                canvas.itemconfig(item, image=alt_normal)
+            else:
+                canvas.itemconfig(item, image=normal)
             canvas.itemconfig(text, fill="#319950")
         def click(e):
-            runquickaction(actions, label)
+            if label == "Volume":
+                is_muted[0] = not is_muted[0]
+                if is_muted[0]:
+                    runquickaction([{"action": "mute_volume"}], label, prompt)
+                    canvas.itemconfig(item, image=alt_normal)
+                else:
+                    runquickaction([{"action": "unmute_volume"}], label, prompt)
+                    canvas.itemconfig(item, image=normal)
+            else:
+                runquickaction(actions, label, prompt)
         for tag in (item, text, textshdw):
             canvas.tag_bind(tag, "<Enter>", enter)
             canvas.tag_bind(tag, "<Leave>", leave)
             canvas.tag_bind(tag, "<Button-1>", click)
-    quick_button(285, 380, "Images/GIFS/screenshot.png", "Screenshot", [{"action": "screenshot"}])
-    quick_button(390, 380, "Images/GIFS/mute.png", "Volume", [{'action': "mute_volume"}])
-    quick_button(495, 380, "Images/GIFS/readscreen.png", " Read\nscreen", [{"action": "read_screen"}])
-
+    quick_button(288, 380, "Images/GIFS/screenshot.png", "Screenshot", [{"action": "screenshot"}])
+    quick_button(415, 380, "Images/GIFS/mute.png", "Volume", [{'action': "mute_volume"}])
+    quick_button(530, 380,"Images/GIFS/readscreen.png"," Read\nscreen",[{"action": "read_screen"}],prompt="what is on my screen")
+    quick_button(640, 380, "Images/GIFS/lock.png", "Lock\n PC", [{"action": "lock_pc"}])
     rounded_rect(canvas, 13, 88, 343, 293, r=9, color="#0a2e18")
     rounded_rect(canvas, 10, 85, 340, 290, r=9, color="#319950")
     rounded_rect(canvas, 353, 88, 693, 293, r=9, color="#0a2e18")
