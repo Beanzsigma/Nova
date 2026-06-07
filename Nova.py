@@ -113,8 +113,8 @@ def get_client():
             api_key=key,
             base_url="https://ai.hackclub.com/proxy/v1" )
     return client_cache["client"]
-COMMAND_MODEL = "qwen/qwen2.5-vl-72b-instruct"
-VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
+COMMAND_MODEL = "claude-sonnet-4"
+VISION_MODEL = "claude-sonnet-4"
 SYSTEM_PROMPT = """You are Nova, an AI desktop assistant for Windows.
 Respond ONLY with a valid JSON object.
 The user will give you a natural language command.
@@ -234,6 +234,7 @@ IF A USER ASKS A FOLLOW UP QUESTION(S), MAKE SURE TO ANSWER AND NOT GIVE UNKNOWN
 Also, when a user asks for a screen summary and stuff like that, make sure to use read_screen, and don't go over 8 words.
 Make sure to answer the user's question everytime, even if it is pretty stupid, and sounds weird. 
 NEVER GIVE UNKNOWN EVEN IF IT IS STUPID OR SOMETHING LIKE THAT, ALWAYS RESPOND UNLESS FULLY NEEDED!
+NEVER GO OVER 8 WORDS, EVEN WHEN SUMMARIZING SCREEN, GIVING ANSWERS, ETC... IF YOU THINK THE ANSWER IS TOO LONG, JUST ASK THE USER TO CLICK THE FULL ANSWER BUTON AS PROMPTED ABOVE. PLease stay within this limits.
 """
 SETTINGSFILE = os.path.join(APPDATA_DIR, "nova_settings.json")
 def savesettings():
@@ -482,6 +483,11 @@ REMEBER YOU CAN USE THE SCROLL FEATURE FOR TASKS!!!
 MUST BE VALID JSON, AND ALWAYS FOLLOW THE USER'S REQUEST!
 If something doesn't work, don't keep trying it. Try something else that you think will work. 
 Don't say the answers to everything before doing something, just do the actions and say it with the action.
+Don't take too much time on one single task. Just make sure you completed it, everything is good, than move on. 
+IMPORTANT:
+If an answer choice already appears selected, checked, highlighted,filled, or chosen, don't click it again.
+Move to the next question instead.
+Never click the same answer twice unless the previous click clearly failed.
 FOR SMALL SCROLLS: scroll 60 
         """
         try:
@@ -794,7 +800,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     text = "No readable text found on screen"
                 def summarizescreen(reqid=requestid):
                     try:
-                        response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 10 words unless solving a problem"
+                        response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 8 words unless solving a problem"
                         }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
