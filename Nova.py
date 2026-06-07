@@ -465,7 +465,8 @@ Previous actions taken:
 {history}
 When clicking stuff, make sure to actually click the thing, like the text for example. Not something random, make sure of this.
 ALWAYS MAKE SURE YOU COMLETED THE TASK BEFORE MOVING ONTO THE NEXT ONE, DON'T MESS THIS UP.
-If your not sure where to click, just click the text next to the button, or something like that... Just make sure you actually click it.
+If you are not reasonably certain what to click, use read_screen or another action to gather more information. Make sure to actually click the button.
+Never guess.
 MAKE SURE YOU ACTUALLY CLICK THE BUTTON, OR THE ASKED THING.
 Look at the current screen and decide the NEXT SINGLE ACTION to take.
 IMPORTANT: Respond with ONLY valid JSON, no other text.
@@ -488,7 +489,10 @@ IMPORTANT:
 If an answer choice already appears selected, checked, highlighted,filled, or chosen, don't click it again.
 Move to the next question instead.
 Never click the same answer twice unless the previous click clearly failed.
-FOR SMALL SCROLLS: scroll 60 
+Return ONLY a JSON object!!
+Do not over-scroll.
+For most scrolls, use a value of 12, since that's the sweet spot.
+This is an example of that scroll: ACTIONS: [{{'action': 'scroll_mouse', 'value': -12}}, {{'action': 'scroll_mouse', 'value': -12}}]
         """
         try:
             response = get_client().chat.completions.create(
@@ -954,7 +958,7 @@ def exectuteactions(actions, update_ui=None, user_text=""):
             elif action == "double_click_mouse":
                 pyautogui.doubleClick()
             elif action == 'scroll_mouse':
-                pyautogui.scroll(int(value)*65)
+                pyautogui.scroll(int(value)*20)
             elif action == "open_app":
                 open_app(value, announce)
             elif action == "close_app":
