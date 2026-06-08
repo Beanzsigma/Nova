@@ -511,6 +511,7 @@ This is an example of that scroll: ACTIONS: [{{'action': 'scroll_mouse', 'value'
             print(f"Step {step+1}: {data}")
             if data.get('done'):
                 print("task completeeeeeeeeeeeeee")
+                speak("Task completed")
                 break
             action_name = data.get('action')
             action_value = data.get('value')

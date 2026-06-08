@@ -1,6 +1,6 @@
 # NOVA
 
-### Nova is a Python based Windows app that interprets user requests using an AI model, which can then see what's on your screen, and perform actions autonomously. Using vision models, OCR,  and memory, Nova can open apps, interact with elements on your screen, and complete multi step tasks on your computer. NOTE: Nova still currently is in BETA stage, and there may be many bugs I'm unaware of. 
+### Nova is a Python based Windows app that interprets user requests using an AI model, which can then see what's on your screen, and perform actions autonomously. Using vision models, OCR,  and memory, Nova can open apps, interact with elements on your screen, and complete multi step tasks on your computer. Nova uses Claude Sonnet 4, an excellent AI desktop model, which perfectly matches the needs for this project. NOTE: Nova still currently is in BETA stage, and there may be many bugs I'm unaware of. 
 
 ## Key features:
 - **Voice commands and wake word support.** To activate wake word, just say "Nova," or you could directly record your voice by clicking the mic on the left side of the UI.
@@ -42,7 +42,7 @@
 ## Things to keep in mind
 - Nova is in beta stages and may occasionally make mistakes
 - Nova's context awareness and multi-step features best works on web browsers such as Chrome, Edge, or Opera GX
-- OCR accuracy depends on text size, contrast, and image quality
+- OCR doesn't work on web pages that don't allow text to be extracted.
 - Multi-step actions may take a bit of time to complete as each step requires AI reasoning and screen analysis
 - Some desktop applications use custom UI frameworks that can make text detection more difficult
 - Multi-monitor support is currently limited and may not work reliably in every situation.
@@ -50,8 +50,8 @@
 - Due to response limits, Nova may face some issues regarding AI status, which may interfere with actions/responses. 
 
 ## Current limitations
-- Vision models can occasionally misunderstand screen content
-- OCR may confuse similar looking words/symbols
+- Vision models can sometimes misunderstand screen content
+- OCR doesn't work on web pages that don't allow text to be extracted. 
 - Autonomous task completion is currently limited by model reasoning quality and API response speed.
 - UI interactions are best reliable on browser based interfaces than customized desktop applications
 
