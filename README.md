@@ -58,7 +58,7 @@
 - Uses Python, which creates slow response times, unlike other languages such as Rust. Also, your internet speed and system specs play a big factor in speeds. 
 
 ## Current status of NOVA
-### Nova is still currently in development. I plan to imrpove the vision, context awareness, and overall reliability in the future. 
+### Nova is still currently in development. I plan to improve the vision, context awareness, and overall reliability in the future. 
 
 ## Why I built NOVA.
 ### Most desktops assistants can only answer questions or run simple commands, but I wanted to build something that can actually interact with a computer, understand context, and then carry out tasks. 
