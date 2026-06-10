@@ -1,3 +1,6 @@
 .env
 .nova_settings.json
 .nova_memory.json
+dist/
+build/
+*.exe

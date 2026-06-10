@@ -99,7 +99,30 @@ import sys
 from dotenv import load_dotenv
 load_dotenv()
 reader = easyocr.Reader(['en'])
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+import shutil
+def setup_tesseract_path():
+    try:
+        if hasattr(sys, '_MEIPASS'):
+            exe_bundled_path = os.path.join(sys._MEIPASS, "Tesseract-OCR", "tesseract.exe")
+            if os.path.exists(exe_bundled_path):
+                pytesseract.pytesseract.tesseract_cmd = exe_bundled_path
+                return
+        standard_paths = [
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), r"Tesseract-OCR\tesseract.exe")]
+        for path in standard_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                return
+        system_path = shutil.which("tesseract")
+        if system_path:
+            pytesseract.pytesseract.tesseract_cmd = system_path
+            return
+        print("Tesseract not found")
+    except Exception as e:
+        print(f"Error configuring Tesseract path: {e}")
+setup_tesseract_path()
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
@@ -198,10 +221,6 @@ Return:
 Only return coordinates if confidence > 0.75.
 When doing multi step tasks, make sure to wait to load and stuff, just take that into account, and make sure to follow user's commands.
 IMPORTANT: Only use read_screen when the user EXPLICITLY asks "what is on my screen", "what can I do", "what do I see", etc. 
-DO NOT use read_screen for action sequences. For example, if user says "open youtube and play a random video", just:
-1. open youtube
-2. wait a bit
-3. click a likely video location (use screen_click to find a thumbnail or video title)
 Do NOT add read_screen unless the user asks about the screen content.
 Sometimes the user's input isn't describing text, like actually get the meaning of what the user's trying to say, and run commands. Like the youtube video thing, dont click the youtube text, but actually understand.
 If the user says "click", "select", "open", or "choose", ALWAYS use screen_click or click_mouse.
@@ -235,6 +254,7 @@ Also, when a user asks for a screen summary and stuff like that, make sure to us
 Make sure to answer the user's question everytime, even if it is pretty stupid, and sounds weird. 
 NEVER GIVE UNKNOWN EVEN IF IT IS STUPID OR SOMETHING LIKE THAT, ALWAYS RESPOND UNLESS FULLY NEEDED!
 NEVER GO OVER 8 WORDS, EVEN WHEN SUMMARIZING SCREEN, GIVING ANSWERS, ETC... IF YOU THINK THE ANSWER IS TOO LONG, JUST ASK THE USER TO CLICK THE FULL ANSWER BUTON AS PROMPTED ABOVE. PLease stay within this limits.
+ALSO, even if the task is small, for example, click yt button then a random video, use the agent_task feature as that's newer, and better. Keep this in mind. -- FOR ANY TASK THAT REQUIRES MORE THAN 1 STEP, JUST USE agent_task PLEASE.
 """
 SETTINGSFILE = os.path.join(APPDATA_DIR, "nova_settings.json")
 def savesettings():
@@ -289,7 +309,7 @@ def getanswerfullvoice(user_text):
             messages=[
                 {
                     "role": "system",
-                    "content": "Give a natural spoken answer. Keep it concise, but do not use the 8 word limit. No markdown."}, {"role": "user","content": user_text}],max_tokens=250)
+                    "content": "Give a natural spoken answer. Keep it concise, but do not use the 8 word limit. No markdown."}, {"role": "user","content": user_text}],max_tokens=530)
         return response.choices[0].message.content.strip()
     except Exception as e:
         print("full voice answer error:", e)
@@ -303,7 +323,7 @@ def askgroq(user_text):
         messages.append({'role': 'user', 'content': user_text})
         print(json.dumps(messages, indent=2))
         try:
-            response = get_client().chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=450)
+            response = get_client().chat.completions.create(model = COMMAND_MODEL, messages=messages, response_format={"type": "json_object"},max_tokens=530)
             raw = response.choices[0].message.content.strip()
         except Exception as e:
             print("HCAI failed, swithcing to OpenRouter:", e)
@@ -492,6 +512,7 @@ Never click the same answer twice unless the previous click clearly failed.
 Return ONLY a JSON object!!
 Do not over-scroll.
 For most scrolls, use a value of 12, since that's the sweet spot.
+Remember how actual desktops work, like when scrolling or something, make sure your actually in the spot to scroll, not in some buttons, because you know, it might not scroll. Same applies to clicking buttons
 This is an example of that scroll: ACTIONS: [{{'action': 'scroll_mouse', 'value': -12}}, {{'action': 'scroll_mouse', 'value': -12}}]
         """
         try:
@@ -499,7 +520,7 @@ This is an example of that scroll: ACTIONS: [{{'action': 'scroll_mouse', 'value'
                 model=VISION_MODEL,
                 messages=[{
                         "role": "user",
-                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=750)
+                        "content": [{"type": "text",  "text": prompt},{"type": "image_url","image_url": {"url":f"data:image/png;base64,{base64_image}"  }  } ]  }   ],response_format={"type": "json_object"},max_tokens=1300)
             content = response.choices[0].message.content
             print("RAW RESPONSE:")
             print(content)
@@ -657,7 +678,7 @@ Return ONLY a single number, nothing else.
         model=VISION_MODEL,
         messages=[{
             "role": "user",
- "content": [ {"type": "text", "text": prompt},{ "type": "image_url", "image_url": {    "url": f"data:image/png;base64,{base64_image}" } }]}],max_tokens=350)
+ "content": [ {"type": "text", "text": prompt},{ "type": "image_url", "image_url": {    "url": f"data:image/png;base64,{base64_image}" } }]}],max_tokens=530)
     try:
         index = int(response.choices[0].message.content.strip())
         index = max(0, min(index, len(matches) - 1))
@@ -717,7 +738,7 @@ ALWAYS CLICK THE THING THAT MAKES THE MOST SENSE.
         messages=[{
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=400)
+                {"type": "text", "text": prompt},{"type": "image_url",   "image_url": {"url": f"data:image/png;base64,{base64_image}"   } } ]  }], response_format={"type": "json_object"},max_tokens=520)
     raw = response.choices[0].message.content.strip()
     data = json.loads(raw)
     print("AI RESULT:", data)
@@ -805,8 +826,8 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                     text = "No readable text found on screen"
                 def summarizescreen(reqid=requestid):
                     try:
-                        response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, max 8 words unless solving a problem"
-                        }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=350)
+                        response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "You are given OCR text from a screen. Answer the user's question briefly, MAX 10 WORDS ALWAYS."
+                        }, {"role": "user", "content": f"Screen text: \n{text[:2000]}\n\nUser question:\n{user_text}"}], max_tokens=530)
                         summary = response.choices[0].message.content.strip()
                         if reqid != requestid:
                             return
@@ -820,34 +841,6 @@ def exectuteactions(actions, update_ui=None, user_text=""):
                         print(f"summarizescreen error: {e}")
                         announce(text[:80])
                 threading.Thread(target=summarizescreen, daemon=True).start()
-                # import re
-                # requestid = time.time()
-                # ss = pyautogui.screenshot()
-                # ss = ss.convert("L")
-                # ss = ss.point(lambda x: 0 if x < 180 else 255)
-                # ss = ss.resize((ss.width * 2, ss.height * 2))
-                # text = pytesseract.image_to_string(ss, config="--oem 3 --psm 6")
-                # text= text.strip()
-                # if not text.strip():
-                #     text = "No readable text found on screen"
-                # def summarizescreen(reqid =requestid):
-                #     try:
-                #         response = client.chat.completions.create(
-                #             model="llama-3.3-70b-versatile",
-                #             messages=[
-                #                 {"role": "system", "content": "You are given OCR text from a screen and a user question. Answer the question based on the screen content. Max 10 words."},
-                #                 {"role": "user", "content": f"Screen text:\n{text[:1000]}\n\nUser question:\n{user_text}"}
-                #             ],
-                #             max_tokens=50
-                #         )
-                #         summary = response.choices[0].message.content.strip()
-                #         if reqid != requestid:
-                #             return
-                #         speak(summary)
-                #         app.after(0, lambda: update_ui(summary) if update_ui else None)
-                #     except Exception as e:
-                #         announce(text[:60])
-                # threading.Thread(target=summarizescreen, daemon=True).start()
             elif action == 'agent_task':
                 run_agent_task(value)
             elif action == "speak_response":
@@ -1187,7 +1180,7 @@ def main(canvas, canvas_img):
     def getfullanswer(result):
         def run():
             response = get_client().chat.completions.create(model= COMMAND_MODEL, messages=[{"role": "system", "content": "Give me a full detailed answer to the user's question. Speak naturally, no lists or markdown"},
-                                                       {"role": "user", "content": result} ], max_tokens=350)
+                                                       {"role": "user", "content": result} ], max_tokens=520)
             full = response.choices[0].message.content.strip()
             speak(full)
         threading.Thread(target=run, daemon=True).start()
@@ -1213,8 +1206,8 @@ def main(canvas, canvas_img):
     active_ui["canvas"] = canvas
     active_ui["canvas_img"] = canvas_img
     active_ui["textinput_window"] = textinput_window
-    responsetext_shdw = canvas.create_text(517, 175, text="", font=("Press Start 2P", 12), fill="#0a2e18", anchor="n", width=310)
-    responsetext= canvas.create_text(514, 172, text="", font=("Press Start 2P", 12), fill="#319950", anchor="n", width=310)
+    responsetext_shdw = canvas.create_text(517, 175, text="", font=("Press Start 2P", 10), fill="#0a2e18", anchor="n", width=310)
+    responsetext= canvas.create_text(514, 172, text="", font=("Press Start 2P", 10), fill="#319950", anchor="n", width=310)
     leftresponseshdw = canvas.create_text(237, 128, text="", font=('Press Start 2P', 13), fill="#0a2e18", anchor='n', width=220)
     lefresponse = canvas.create_text(234, 125, text="", font=("Press Start 2P", 13), fill="#319950", anchor='n', width=220)
     fullresbutton1shdw = canvas.create_text(244, 272, text="Full Answer", font=('Necosmic Personal use', 12), fill="#0a2e18")
@@ -1249,7 +1242,7 @@ def main(canvas, canvas_img):
                 response =get_client().chat.completions.create(
                     model=COMMAND_MODEL,
                     messages=[
-                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},{"role": "user", "content": result}],max_tokens=350)
+                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},{"role": "user", "content": result}],max_tokens=520)
                 full = response.choices[0].message.content.strip()
                 speak(full)
             finally:
@@ -1265,7 +1258,7 @@ def main(canvas, canvas_img):
                 response = get_client().chat.completions.create(
                     model=COMMAND_MODEL,
                     messages=[
-                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},  {"role": "user", "content": result}],max_tokens=350)
+                        {"role": "system", "content": "Give me a full natural answer, no lists or markdown. Also, do NOT talk for too long, or get off track. Give a good answer, that's it."},  {"role": "user", "content": result}],max_tokens=520)
                 full = response.choices[0].message.content.strip()
                 speak(full)
             finally:
