@@ -55,7 +55,7 @@
 - OCR doesn't work on web pages that don't allow text to be extracted. 
 - Autonomous task completion is currently limited by model reasoning quality and API response speed.
 - UI interactions are best reliable on browser based interfaces than customized desktop applications.
-- Uses Python, which creates slow response times, unlike other languages such as Rust. Also, your internet speed and system specs play a big factor in speeds. 
+- Uses Python, which creates slow response times, unlike other languages such as Rust. Also, your internet speed and system specs play a big factor in performance. 
 
 ## Current status of NOVA
 ### Nova is still currently in development. I plan to improve the vision, context awareness, and overall reliability in the future. 
