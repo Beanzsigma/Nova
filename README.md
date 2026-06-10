@@ -47,7 +47,7 @@
 - Some desktop applications use custom UI frameworks that can make text detection more difficult
 - Multi-monitor support is currently limited and may not work reliably in every situation.
 - Nova performs best when UI elements are clearly visible and not obstructed
-- Due to response limits, Nova may face some issues regarding AI status, which may interfere with actions/responses. 
+- Due to response limits, Nova may face some issues regarding AI status, which may randomly cut of actions.
 - Nova may be slow due to Python, and your internet speed/system specs play a big factor in speeds. 
 
 ## Current limitations
