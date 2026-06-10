@@ -80,5 +80,6 @@
 ### To run Nova, download the latest EXE release, which can be found here:https://github.com/Beanzsigma/Nova/releases/tag/v1.0. Also, in that release, download the Tesseract OCR file, open it, and complete the installation steps. After you have downloaded the EXE file, open the app, and that's where it will then prompt you about some unknown publisher. To continue, click "More info," then "run anyway." After you get into the app, click the settings button at the top, and type you Hack Club AI API key in the designated area. After you've completed these steps, Nova should be ready to use. NOTE: Nova may take a bit of time to load for some users, and to operate it... be patient, Python is pretty slow! - This also depends on your PC specs/internet speed.
 
 ## Demo: 
-### Here is a google drive link to a demo video. NOTE: this video is being played at two times speed: 
+### Here is a google drive link to a demo video. NOTE: this video is being played at two times speed:
+<img width="689" height="523" alt="Screenshot 2026-06-09 175623" src="https://github.com/user-attachments/assets/2ad913f3-5d8c-4e80-8e7e-bb5715a13ac5" />
 
