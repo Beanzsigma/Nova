@@ -48,12 +48,14 @@
 - Multi-monitor support is currently limited and may not work reliably in every situation.
 - Nova performs best when UI elements are clearly visible and not obstructed
 - Due to response limits, Nova may face some issues regarding AI status, which may interfere with actions/responses. 
+- Nova may be slow due to Python, and your internet speed/system specs play a big factor in speeds. 
 
 ## Current limitations
-- Vision models can sometimes misunderstand screen content
+- Vision models can sometimes misunderstand screen content.
 - OCR doesn't work on web pages that don't allow text to be extracted. 
 - Autonomous task completion is currently limited by model reasoning quality and API response speed.
-- UI interactions are best reliable on browser based interfaces than customized desktop applications
+- UI interactions are best reliable on browser based interfaces than customized desktop applications.
+- Uses Python, which creates slow response times, unlike other languages such as Rust. Also, your internet speed and system specs play a big factor in speeds. 
 
 ## Current status of NOVA
 ### Nova is still currently in development. I plan to imrpove the vision, context awareness, and overall reliability in the future. 
@@ -65,7 +67,7 @@
 ### I ran into a lot of challenges and problems when building this app. At first, I didn't think I could build this, but after hours of watching youtube tutorials, I managed to slowly build new features. I spent the majority of my time tuning the OCR feature, and it still isn't perfect. It got to a point where I had to compute the confidence of the AI, since it was always clicking the wrong buttons, and then filter out the best matches. In addition to that, I spent the rest of the time fixing random bugs that randomly pop up. This entire app has been a huge roller coaster, but in the end, I managed to pull through. 
 
 ## Disclaimer:
-### Nova is an experimental AI desktop assistant, and because it directly interacts with your desktop, occasional mistakes may occur. Always watch over the AI as it performs tasks. 
+### Nova is an experimental AI desktop assistant, and because it directly interacts with your desktop, occasional mistakes may occur. From my experiences, Nova may occacsionally clicks random things on your screen, as this is an OCR bug I can't prevent. Please watch over your computer while Nova is running tasks. 
 
 ## Where AI assistance was used:
 - AI assistance was used to help tune the OCR vision
@@ -74,4 +76,9 @@
 - AI helped build some parts of the prompts
 #### For the most part, the rest of the application logic, desktop automation, UI development, and system integration were implemented by me. 
 
+## How to run
+### To run Nova, download the latest EXE release, which can be found here:https://github.com/Beanzsigma/Nova/releases/tag/v1.0. Also, in that release, download the Tesseract OCR file, open it, and complete the installation steps. After you have downloaded the EXE file, open the app, and that's where it will then prompt you about some unknown publisher. To continue, click "More info," then "run anyway." After you get into the app, click the settings button at the top, and type you Hack Club AI API key in the designated area. After you've completed these steps, Nova should be ready to use. NOTE: Nova may take a bit of time to load for some users, and to operate it... be patient, Python is pretty slow! - This also depends on your PC specs/internet speed.
+
 ## Demo: 
+### Here is a google drive link to a demo video. NOTE: this video is being played at two times speed: 
+
